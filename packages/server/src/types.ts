@@ -6,3 +6,9 @@ export type ServerOptions = {
 	getDB: (c: Context<{Bindings: Env}>) => RemoteSQL;
 	getEnv: (c: Context<{Bindings: Env}>) => Env;
 };
+
+export type Subscription = {
+	endpoint: string;
+	expirationTime?: number;
+	keys: {p256dh: string; auth: string};
+};

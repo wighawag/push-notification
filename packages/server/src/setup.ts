@@ -1,14 +1,14 @@
 import {MiddlewareHandler} from 'hono/types';
 import {ServerOptions} from './types.js';
 import {Env} from './env.js';
-// import {RemoteSQLStorage} from './storage/RemoteSQLStorage.js';
+import {RemoteSQLStorage} from './storage/RemoteSQLStorage.js';
 
 export type SetupOptions = {
 	serverOptions: ServerOptions;
 };
 
 export type Config = {
-	// storage: RemoteSQLStorage;
+	storage: RemoteSQLStorage;
 	env: Env;
 };
 
@@ -25,17 +25,17 @@ export function setup(options: SetupOptions): MiddlewareHandler {
 		const env = getEnv(c);
 
 		const db = getDB(c);
-		// const storage = new RemoteSQLStorage(db);
+		const storage = new RemoteSQLStorage(db);
 
 		c.set('config', {
-			// storage,
+			storage,
 			env,
 		});
 
-		// // auto setup
-		// if (c.req.query('_initDB') == 'true') {
-		// 	await storage.setup();
-		// }
+		// auto setup
+		if (c.req.query('_initDB') == 'true') {
+			await storage.setup();
+		}
 
 		return next();
 	};

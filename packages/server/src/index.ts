@@ -5,10 +5,11 @@ import {hc} from 'hono/client';
 import {HTTPException} from 'hono/http-exception';
 import {Env} from './env.js';
 import {getDummyAPI} from './api/dummy.js';
+import {logs} from 'named-logs';
+
+const logger = logs('push-notification-server-app');
 
 export type {Env};
-
-// export type {Storage} from './storage/index.js';
 
 const corsSetup = cors({
 	origin: '*',
@@ -30,7 +31,7 @@ export function createServer(options: ServerOptions) {
 		.onError((err, c) => {
 			const config = c.get('config');
 			const env = config?.env || {};
-			console.error(err);
+			logger.error(err);
 			if (err instanceof HTTPException) {
 				if (err.res) {
 					return err.getResponse();
