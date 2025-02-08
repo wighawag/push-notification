@@ -5,82 +5,185 @@
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
-import { build, files, version } from '$service-worker';
+import { build, version, prerendered, files } from '$service-worker';
+
+// ------------------- CONFIG ---------------------------
+const DEV = true;
+const OFFLINE_CACHE = 'all';
+// ------------------------------------------------------
+
+let ASSETS: string[] = [];
+if (OFFLINE_CACHE === 'all') {
+	ASSETS = build.concat(prerendered).concat(files.filter((v) => v.indexOf('pwa/') === -1));
+} // TODO support more offline option
+
+let _logEnabled = true; // TODO false
+function log(...args: any[]) {
+	if (_logEnabled) {
+		console.debug(...args);
+	}
+}
 
 // Create a unique cache name for this deployment
-const CACHE = `cache-${version}`;
+const CACHE_NAME = `cache-${version}`;
 
-const ASSETS = [
-	...build, // the app itself
-	...files // everything in `static`
-];
-console.log('hello');
-sw.addEventListener('install', (event) => {
-	// Create a new cache and add all files to it
-	async function addFilesToCache() {
-		const cache = await caches.open(CACHE);
-		await cache.addAll(ASSETS);
+sw.addEventListener('message', function (event) {
+	if (event.data && event.data.type === 'debug') {
+		_logEnabled = event.data.enabled && event.data.level >= 5;
+	} else if (event.data === 'skipWaiting') {
+		log(`skipWaiting received`);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(self as any).skipWaiting();
 	}
+});
 
-	event.waitUntil(addFilesToCache());
+const regexesOnlineFirst: string[] = [];
+if (DEV) {
+	regexesOnlineFirst.push('localhost');
+}
+
+const regexesOnlineOnly: string[] = [];
+
+const regexesCacheFirst = [
+	self.location.origin,
+	// 'https://rsms.me/inter/', // TODO remove, used if using font from there
+	'cdn',
+	'.*\\.png$',
+	'.*\\.svg$'
+];
+
+const regexesCacheOnly: string[] = [];
+
+// If the url doesn't match any of those regexes, it will do online first
+
+log(`[Service Worker] Origin: ${self.location.origin}`);
+
+sw.addEventListener('install', (event) => {
+	log('[Service Worker] Install');
+	event.waitUntil(
+		caches
+			.open(CACHE_NAME)
+			.then((cache) => {
+				log(`[Service Worker] Creating cache: ${CACHE_NAME}`);
+				return cache.addAll(ASSETS);
+			})
+			.then(() => {
+				// (self as any).skipWaiting();
+				log(`cache fully fetched!`);
+			})
+	);
 });
 
 sw.addEventListener('activate', (event) => {
-	// Remove previous cached data from disk
-	async function deleteOldCaches() {
-		for (const key of await caches.keys()) {
-			if (key !== CACHE) await caches.delete(key);
-		}
-	}
-
-	event.waitUntil(deleteOldCaches());
+	log('[Service Worker] Activate');
+	event.waitUntil(
+		caches.keys().then((cacheNames) => {
+			return Promise.all(
+				cacheNames.map((thisCacheName) => {
+					if (thisCacheName !== CACHE_NAME) {
+						log(`[Service Worker] Deleting: ${thisCacheName}`);
+						return caches.delete(thisCacheName);
+					}
+				})
+			).then(() => (self as any).clients.claim());
+		})
+	);
 });
 
-sw.addEventListener('fetch', (event) => {
-	// ignore POST requests etc
-	if (event.request.method !== 'GET') return;
-
-	async function respond() {
-		const url = new URL(event.request.url);
-		const cache = await caches.open(CACHE);
-
-		// `build`/`files` can always be served from the cache
-		if (ASSETS.includes(url.pathname)) {
-			const response = await cache.match(url.pathname);
-
-			if (response) {
-				return response;
+const update = (request: Request, cache?: Response) => {
+	return fetch(request)
+		.then((response) => {
+			return caches
+				.open(CACHE_NAME)
+				.then((cache) => {
+					if (request.method === 'GET' && request.url.startsWith('http')) {
+						// only on http protocol to prevent chrome-extension request to error out
+						cache.put(request, response.clone());
+					}
+					return response;
+				})
+				.catch((err) => {
+					log(`error: ${err}`);
+					return response;
+				});
+		})
+		.catch((err) => {
+			if (cache) {
+				return cache;
+			} else {
+				throw err;
 			}
-		}
+		});
+};
 
-		// for everything else, try the network first, but
-		// fall back to the cache if we're offline
-		try {
-			const response = await fetch(event.request);
+const cacheFirst = {
+	method: (request: Request, cache?: Response) => {
+		log(`[Service Worker] Cache first: ${request.url}`);
+		const fun = update(request, cache);
+		return cache || fun;
+	},
+	regexes: regexesCacheFirst
+};
 
-			// if we're offline, fetch can return a value that is not a Response
-			// instead of throwing - and we can't pass this non-Response to respondWith
-			if (!(response instanceof Response)) {
-				throw new Error('invalid response from fetch');
-			}
+const cacheOnly = {
+	method: (request: Request, cache?: Response) => {
+		log(`[Service Worker] Cache only: ${request.url}`);
+		return cache || update(request, cache);
+	},
+	regexes: regexesCacheOnly
+};
 
-			if (response.status === 200) {
-				cache.put(event.request, response.clone());
-			}
+const onlineFirst = {
+	method: (request: Request, cache?: Response) => {
+		log(`[Service Worker] Online first: ${request.url}`);
+		return update(request, cache);
+	},
+	regexes: regexesOnlineFirst
+};
 
-			return response;
-		} catch (err) {
-			const response = await cache.match(event.request);
+const onlineOnly = {
+	method: (request: Request) => {
+		log(`[Service Worker] Online only: ${request.url}`);
+		return fetch(request);
+	},
+	regexes: regexesOnlineOnly
+};
 
-			if (response) {
-				return response;
-			}
-
-			// if there's no cache, then just error out
-			// as there is nothing we can do to respond to this request
-			throw err;
-		}
+async function getResponse(event: FetchEvent): Promise<Response> {
+	const request = event.request;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const registration = (self as any).registration as ServiceWorkerRegistration;
+	if (
+		event.request.mode === 'navigate' &&
+		event.request.method === 'GET' &&
+		registration.waiting &&
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(await (self as any).clients.matchAll()).length < 2
+	) {
+		log('only one client, skipWaiting as we navigate the page');
+		registration.waiting.postMessage('skipWaiting');
+		const response = new Response('', { headers: { Refresh: '0' } });
+		return response;
 	}
 
-	event.respondWith(respond());
+	// TODO remove query param from matching, query param are used as config (why not use hashes then ?) const normalizedUrl = normalizeUrl(event.request.url);
+	const response = await caches.match(request).then((cache) => {
+		// The order matters !
+		const patterns = [onlineFirst, onlineOnly, cacheFirst, cacheOnly];
+
+		for (const pattern of patterns) {
+			for (const regex of pattern.regexes) {
+				if (RegExp(regex).test(request.url)) {
+					return pattern.method(request, cache);
+				}
+			}
+		}
+
+		return onlineFirst.method(request, cache);
+	});
+	return response;
+}
+
+sw.addEventListener('fetch', (event: FetchEvent) => {
+	event.respondWith(getResponse(event));
 });
