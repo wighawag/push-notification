@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { subscription } from '$lib/web/push-notifications/subscription';
+	import { subscription } from '$lib/web/service-worker/push-notifications/subscription';
 </script>
 
 {#if $subscription.settled}
