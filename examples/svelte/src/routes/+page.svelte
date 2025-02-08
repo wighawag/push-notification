@@ -1,2 +1,9 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+	import { subscription } from '$lib/web/push-notifications/subscription';
+</script>
+
+{#if $subscription.settled}
+	{$subscription.subscription?.toJSON() ?? 'no subscription'}
+{:else}
+	please wait...
+{/if}

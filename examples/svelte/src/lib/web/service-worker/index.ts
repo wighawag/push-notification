@@ -1,4 +1,4 @@
-import {get, writable} from 'svelte/store';
+import { get, writable } from 'svelte/store';
 
 export type ServiceWorkerState = {
 	registration?: ServiceWorkerRegistration;
@@ -7,7 +7,7 @@ export type ServiceWorkerState = {
 
 const store = writable<ServiceWorkerState>({
 	registration: undefined,
-	updateAvailable: false,
+	updateAvailable: false
 });
 export const serviceWorker = {
 	...store,
@@ -16,7 +16,7 @@ export const serviceWorker = {
 	},
 	get updateAvailable(): boolean {
 		return get(store).updateAvailable;
-	},
+	}
 };
 
 // allow to test service worker notifcation by executing the following in the console:
