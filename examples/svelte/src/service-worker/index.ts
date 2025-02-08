@@ -20,7 +20,7 @@ if (OFFLINE_CACHE === 'all') {
 let _logEnabled = true; // TODO false
 function log(...args: any[]) {
 	if (_logEnabled) {
-		console.debug(...args);
+		console.debug(`[Service Worker] ${args[0]}`, ...args.slice(2));
 	}
 }
 
@@ -30,6 +30,9 @@ const CACHE_NAME = `cache-${version}`;
 sw.addEventListener('message', function (event) {
 	if (event.data && event.data.type === 'debug') {
 		_logEnabled = event.data.enabled && event.data.level >= 5;
+		if (_logEnabled) {
+			log(`log enabled ${event.data.level}`);
+		}
 	} else if (event.data === 'skipWaiting') {
 		log(`skipWaiting received`);
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,15 +59,15 @@ const regexesCacheOnly: string[] = [];
 
 // If the url doesn't match any of those regexes, it will do online first
 
-log(`[Service Worker] Origin: ${self.location.origin}`);
+log(`Origin: ${self.location.origin}`);
 
 sw.addEventListener('install', (event) => {
-	log('[Service Worker] Install');
+	log('Install');
 	event.waitUntil(
 		caches
 			.open(CACHE_NAME)
 			.then((cache) => {
-				log(`[Service Worker] Creating cache: ${CACHE_NAME}`);
+				log(`Creating cache: ${CACHE_NAME}`);
 				return cache.addAll(ASSETS);
 			})
 			.then(() => {
@@ -75,13 +78,13 @@ sw.addEventListener('install', (event) => {
 });
 
 sw.addEventListener('activate', (event) => {
-	log('[Service Worker] Activate');
+	log('Activate');
 	event.waitUntil(
 		caches.keys().then((cacheNames) => {
 			return Promise.all(
 				cacheNames.map((thisCacheName) => {
 					if (thisCacheName !== CACHE_NAME) {
-						log(`[Service Worker] Deleting: ${thisCacheName}`);
+						log(`Deleting: ${thisCacheName}`);
 						return caches.delete(thisCacheName);
 					}
 				})
@@ -118,7 +121,7 @@ const update = (request: Request, cache?: Response) => {
 
 const cacheFirst = {
 	method: (request: Request, cache?: Response) => {
-		log(`[Service Worker] Cache first: ${request.url}`);
+		log(`Cache first: ${request.url}`);
 		const fun = update(request, cache);
 		return cache || fun;
 	},
@@ -127,7 +130,7 @@ const cacheFirst = {
 
 const cacheOnly = {
 	method: (request: Request, cache?: Response) => {
-		log(`[Service Worker] Cache only: ${request.url}`);
+		log(`Cache only: ${request.url}`);
 		return cache || update(request, cache);
 	},
 	regexes: regexesCacheOnly
@@ -135,7 +138,7 @@ const cacheOnly = {
 
 const onlineFirst = {
 	method: (request: Request, cache?: Response) => {
-		log(`[Service Worker] Online first: ${request.url}`);
+		log(`Online first: ${request.url}`);
 		return update(request, cache);
 	},
 	regexes: regexesOnlineFirst
@@ -143,7 +146,7 @@ const onlineFirst = {
 
 const onlineOnly = {
 	method: (request: Request) => {
-		log(`[Service Worker] Online only: ${request.url}`);
+		log(`Online only: ${request.url}`);
 		return fetch(request);
 	},
 	regexes: regexesOnlineOnly

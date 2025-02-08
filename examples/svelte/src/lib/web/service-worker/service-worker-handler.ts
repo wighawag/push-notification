@@ -4,22 +4,21 @@ import { serviceWorker } from './registration';
 import { base } from '$app/paths';
 import { dev } from '$app/environment';
 
-const console = logs('service-worker') as Logger & {
+const logger = logs('service-worker') as Logger & {
 	level: number;
 	enabled: boolean;
 };
 function updateLoggingForWorker(worker: ServiceWorker | null) {
 	if (worker) {
-		if (console.enabled) {
-			console.debug(`enabling logging for service worker, level: ${console.level}`);
+		if (logger.enabled) {
+			logger.debug(`enabling logging for service worker, level: ${logger.level}`);
 		} else {
-			console.debug(`disabling logging for service worker, level: ${console.level}`);
+			logger.debug(`disabling logging for service worker, level: ${logger.level}`);
 		}
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		worker.postMessage({
 			type: 'debug',
-			level: console.level,
-			enabled: console.enabled
+			level: logger.level,
+			enabled: logger.enabled
 		});
 	}
 }
@@ -29,12 +28,14 @@ const CHECK_DELAY_MS = 30 * 60 * 1000;
 
 function handleAutomaticUpdate(registration: ServiceWorkerRegistration) {
 	let lastFocusTime = performance.now();
-	function wakeup() {
+	function wakeup(evt?: Event) {
+		// logger.debug('waking up...', evt);
 		const timePassed = performance.now();
 		if (timePassed - lastFocusTime > IDLE_DELAY_MS) {
+			logger.debug('checking service worker...');
 			registration.update();
+			lastFocusTime = timePassed;
 		}
-		lastFocusTime = timePassed;
 	}
 	['focus', 'pointerdown'].forEach((evt) => window.addEventListener(evt, wakeup));
 
@@ -97,6 +98,6 @@ if (!dev && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
 			});
 		})
 		.catch((e) => {
-			console.error('Failed to register service worker', e);
+			logger.error('Failed to register service worker', e);
 		});
 }
