@@ -6,6 +6,11 @@ layout {
 	}
 	pane split_direction="vertical" {
 		pane command="bash"  {
+			args "-c" "pnpm subscription-client:dev; cd packages/subscription-client; ${SHELL-bash}"
+		}
+	}
+	pane split_direction="vertical" {
+		pane command="bash"  {
 			args "-c" "pnpm server:dev; cd packages/server; ${SHELL-bash}"
 		}
 		pane name="server sql watch" command="bash" {

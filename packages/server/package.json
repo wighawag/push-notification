@@ -1,6 +1,6 @@
 {
   "name": "push-notification-server-app",
-  "version": "0.10.0",
+  "version": "0.0.0",
   "description": "push notification server app",
   "license": "MIT",
   "publishConfig": {
