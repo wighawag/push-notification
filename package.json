@@ -22,6 +22,7 @@
     "cf-worker:dev": "pnpm --filter push-notification-server-cf-worker dev",
     "server:dev": "pnpm --filter push-notification-server-app dev",
     "subscription-client:dev": "pnpm --filter push-notification-subscription-client dev",
+    "example:svelte:dev":  "pnpm --filter push-notification-example-svelte dev",
     "---------------------- DEPLOY ----------------------": "",
     "build": "ldenv pnpm run -r build",
     "deploy:cf": "pnpm run --filter push-notification-server-server-cf-worker deploy",

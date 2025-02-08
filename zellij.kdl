@@ -8,6 +8,9 @@ layout {
 		pane command="bash"  {
 			args "-c" "pnpm subscription-client:dev; cd packages/subscription-client; ${SHELL-bash}"
 		}
+		pane command="bash"  {
+			args "-c" "pnpm example:svelte:dev; cd examples/svelte; ${SHELL-bash}"
+		}
 	}
 	pane split_direction="vertical" {
 		pane command="bash"  {
