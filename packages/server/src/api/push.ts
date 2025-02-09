@@ -4,7 +4,7 @@ import {setup} from '../setup.js';
 import {Env} from '../env.js';
 import {typiaValidator} from '@hono/typia-validator';
 import {createValidate} from 'typia';
-import webPush, {Urgency} from 'web-push';
+import webPush, {type Urgency} from 'web-push';
 import {logs} from 'named-logs';
 
 const logger = logs('push-notification-server-app');
