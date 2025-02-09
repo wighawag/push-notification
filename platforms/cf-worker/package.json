@@ -12,10 +12,10 @@
   "dependencies": {
     "named-logs": "^0.3.2",
     "named-logs-context": "^0.1.1",
-    "remote-sql-d1": "^0.0.6",
-    "workers-logger": "0.2.1",
     "push-notification-server-app": "workspace:*",
-    "viem": "^2.21.55"
+    "remote-sql-d1": "^0.0.6",
+    "viem": "^2.21.55",
+    "workers-logger": "0.2.1"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.5.36",

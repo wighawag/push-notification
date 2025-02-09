@@ -67,7 +67,7 @@ function listenForWaitingServiceWorker(
 	}
 }
 
-if (!dev && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
 	// ------------------------------------------------------------------------------------------------
 	// FORCE RELOAD ON CONTROLLER CHANGE
 	// ------------------------------------------------------------------------------------------------
@@ -84,7 +84,9 @@ if (!dev && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
 	const swLocation = `${base}/service-worker.js`;
 	//{scope: `${base}/`}
 	navigator.serviceWorker
-		.register(swLocation)
+		.register(swLocation, {
+			type: dev ? 'module' : 'classic'
+		})
 		.then((registration) => {
 			try {
 				handleAutomaticUpdate(registration);

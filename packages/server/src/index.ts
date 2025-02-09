@@ -6,6 +6,7 @@ import {HTTPException} from 'hono/http-exception';
 import {Env} from './env.js';
 import {getDummyAPI} from './api/dummy.js';
 import {logs} from 'named-logs';
+import {getAPI} from './api/index.js';
 
 const logger = logs('push-notification-server-app');
 
@@ -24,10 +25,12 @@ export function createServer(options: ServerOptions) {
 	const app = new Hono<{Bindings: Env}>();
 
 	const dummy = getDummyAPI(options);
+	const api = getAPI(options);
 
 	return app
 		.use('/*', corsSetup)
 		.route('/', dummy)
+		.route('/api', api)
 		.onError((err, c) => {
 			const config = c.get('config');
 			const env = config?.env || {};

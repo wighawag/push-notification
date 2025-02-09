@@ -19,8 +19,12 @@
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.0.0",
 		"typescript": "^5.0.0",
+		"viem": "^2.21.55",
 		"vite": "^6.0.0",
 		"vitest": "^3.0.0"
+	},
+	"peerDependencies": {
+		"viem": "^2.21.55"
 	},
 	"dependencies": {
 		"named-logs": "^0.3.2"
