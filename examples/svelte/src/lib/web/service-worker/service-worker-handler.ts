@@ -34,11 +34,15 @@ function handleAutomaticUpdate(registration: ServiceWorkerRegistration) {
 		if (timePassed - lastFocusTime > IDLE_DELAY_MS) {
 			logger.debug('checking service worker...');
 			registration.update();
-			lastFocusTime = timePassed;
 		}
+		// we reset the time each time we wake up
+		// the idea here is that we do not want to bother users while they are actively using the app
+		lastFocusTime = timePassed;
 	}
 	['focus', 'pointerdown'].forEach((evt) => window.addEventListener(evt, wakeup));
 
+	// but we still do not an update every so often
+	// TODO improve upon this
 	setInterval(() => registration.update(), CHECK_DELAY_MS);
 }
 
