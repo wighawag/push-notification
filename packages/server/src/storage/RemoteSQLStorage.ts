@@ -47,6 +47,17 @@ export class RemoteSQLStorage implements Storage {
 		await statement.bind(address, domain, subscriptionID).all<Subscription>();
 	}
 
+	async getSubscription(address: string, domain: string, subscriptionID: string): Promise<Subscription | undefined> {
+		const statement = this.db.prepare(
+			`SELECT * FROM Subscriptions WHERE address = ?1 AND domain = ?2 AND subscriptionID = ?3;`,
+		);
+		const {results} = await statement.bind(address, domain, subscriptionID).all<SubscriptionInDB>();
+		if (results.length === 0) {
+			return undefined;
+		}
+		return JSON.parse(results[0].subscription);
+	}
+
 	async setup() {
 		const statements = sqlToStatements(setupDB);
 		// The following do not work on bun sqlite:

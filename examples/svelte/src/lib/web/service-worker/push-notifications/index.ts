@@ -1,4 +1,4 @@
-import { derived, writable, type Readable } from 'svelte/store';
+import { derived, type Readable } from 'svelte/store';
 import { serviceWorker, type ServiceWorkerState } from '..';
 import { urlB64ToUint8Array } from './utils';
 
@@ -23,7 +23,12 @@ export type PushNotificationsState =
 			loading: boolean;
 	  };
 
-function createPushNotificationStore(params: { serverPublicKey: string; serverEndpoint: string }) {
+export function createPushNotificationStore(params: {
+	serverPublicKey: string;
+	serverEndpoint: string;
+	domain: string;
+}) {
+	const domain = params.domain;
 	async function getSubscriptionState(
 		registration: ServiceWorkerRegistration
 	): Promise<SettledPushNotificationsState> {
@@ -31,7 +36,7 @@ function createPushNotificationStore(params: { serverPublicKey: string; serverEn
 		if (subscription) {
 			const accountAddress = ''; // TODO
 			const registrationOnServerResponse = await fetch(
-				`${params.serverEndpoint}/registered/${accountAddress}/${subscription.endpoint}`
+				`${params.serverEndpoint}/registered/${accountAddress}/${domain}/${subscription.endpoint}`
 			);
 			const registrationResult = await registrationOnServerResponse.json();
 
@@ -112,7 +117,7 @@ function createPushNotificationStore(params: { serverPublicKey: string; serverEn
 							method: 'POST',
 							body: JSON.stringify({
 								address: '', // params.address, // TODO if address change, should we also consider being registered ?
-								domain: '', // params.domain, // TODO could it be automated
+								domain: domain,
 								subscription: subscription.toJSON()
 							})
 						});
@@ -141,8 +146,3 @@ function createPushNotificationStore(params: { serverPublicKey: string; serverEn
 
 	return { subscribe, refresh, subscribeToPush, acknowledgeError };
 }
-
-export const pushNotifications = createPushNotificationStore({
-	serverEndpoint: '',
-	serverPublicKey: ''
-});

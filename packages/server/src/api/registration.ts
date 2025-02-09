@@ -17,10 +17,27 @@ export function getRegistrationAPI(options: ServerOptions) {
 		.post('/register', typiaValidator('json', createValidate<SubscriptionRegistration>()), async (c) => {
 			const config = c.get('config');
 			const storage = config.storage;
+
 			const registration = await c.req.json();
+
 			// TODO authentication of address
 			await storage.recordSubscription(registration.address, registration.domain, registration.subscription);
-			return c.text('hello world');
+			return c.json({succes: true, registered: true});
+		})
+		.get('/registered/:address/:domain/:subscriptionID', async (c) => {
+			const config = c.get('config');
+			const storage = config.storage;
+
+			const address = c.req.param('address');
+			const domain = c.req.param('domain');
+			const subscriptionID = c.req.param('subscriptionID');
+
+			const subscription = await storage.getSubscription(address, domain, subscriptionID);
+			if (subscription) {
+				return c.json({succes: true, registered: true});
+			} else {
+				return c.json({succes: true, registered: false});
+			}
 		});
 
 	return app;
