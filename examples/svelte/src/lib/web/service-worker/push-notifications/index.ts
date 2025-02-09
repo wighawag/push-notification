@@ -7,6 +7,7 @@ export type SettledPushNotificationsState =
 			settled: true;
 			subscription: PushSubscription;
 			subscribing: false;
+			registeredOnServer: boolean;
 	  }
 	| {
 			settled: true;
@@ -22,18 +23,33 @@ export type PushNotificationsState =
 			loading: boolean;
 	  };
 
-async function getSubscriptionState(
-	registration: ServiceWorkerRegistration
-): Promise<SettledPushNotificationsState> {
-	const subscription = await registration.pushManager.getSubscription();
-	return {
-		settled: true,
-		subscription: subscription ? subscription : undefined,
-		subscribing: false
-	};
-}
-
 function createPushNotificationStore(params: { serverPublicKey: string; serverEndpoint: string }) {
+	async function getSubscriptionState(
+		registration: ServiceWorkerRegistration
+	): Promise<SettledPushNotificationsState> {
+		const subscription = await registration.pushManager.getSubscription();
+		if (subscription) {
+			const accountAddress = ''; // TODO
+			const registrationOnServerResponse = await fetch(
+				`${params.serverEndpoint}/registered/${accountAddress}/${subscription.endpoint}`
+			);
+			const registrationResult = await registrationOnServerResponse.json();
+
+			return {
+				settled: true,
+				subscription,
+				subscribing: false,
+				registeredOnServer: registrationResult.registered
+			};
+		} else {
+			return {
+				settled: true,
+				subscription: undefined,
+				subscribing: false
+			};
+		}
+	}
+
 	let guard: object | undefined;
 
 	let _state: PushNotificationsState = { settled: false, loading: false };
@@ -89,16 +105,27 @@ function createPushNotificationStore(params: { serverPublicKey: string; serverEn
 				})
 				.then(async function (subscription) {
 					// TODO one more state update to show registrating on server
-					await fetch(`${params.serverEndpoint}/register`, {
-						method: 'POST',
-						body: JSON.stringify({
-							address: '', // params.address, // TODO if address change, should we also consider being registered ?
-							domain: '', // params.domain, // TODO could it be automated
-							subscription: subscription.toJSON()
-						})
-					});
 
-					setState({ settled: true, subscription, subscribing: false });
+					let registeredOnServer = false;
+					try {
+						const response = await fetch(`${params.serverEndpoint}/register`, {
+							method: 'POST',
+							body: JSON.stringify({
+								address: '', // params.address, // TODO if address change, should we also consider being registered ?
+								domain: '', // params.domain, // TODO could it be automated
+								subscription: subscription.toJSON()
+							})
+						});
+						if (response.ok) {
+							const json = await response.json();
+							registeredOnServer = json.registered;
+						}
+					} catch (err) {
+						// TODO
+						// show error ?
+					}
+
+					setState({ settled: true, subscription, subscribing: false, registeredOnServer });
 				})
 				.catch(function (error) {
 					setState({ settled: true, subscription: undefined, subscribing: false, error });
