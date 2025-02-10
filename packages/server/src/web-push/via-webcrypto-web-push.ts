@@ -10,7 +10,7 @@ export async function sendNotification(
 		topic,
 		urgency,
 		ttl,
-	}: {vapidKeys: Omit<VapidKeys, 'subject'>; subject: string; topic?: string; urgency: Urgency; ttl?: number},
+	}: {vapidKeys: Omit<VapidKeys, 'subject'>; subject: string; topic?: string; urgency?: Urgency; ttl?: number},
 ): Promise<Response> {
 	const fetchData = await buildPushPayload(
 		{

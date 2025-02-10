@@ -21,22 +21,31 @@ export type Push = {
 	domain: string;
 	message: string;
 	topic?: string;
-	urgeny?: Urgency;
+	urgency?: Urgency;
 };
 
 export function getAPI(options: ServerOptions) {
 	const app = new Hono<{Bindings: Env}>()
 		.use(setup({serverOptions: options}))
-		.post('/register', typiaValidator('json', createValidate<SubscriptionRegistration>()), async (c) => {
-			const config = c.get('config');
-			const storage = config.storage;
+		.post(
+			'/register',
+			// async (c, next) => {
+			// 	console.log(await c.req.json());
+			// 	await next();
+			// },
+			typiaValidator('json', createValidate<SubscriptionRegistration>()),
+			async (c) => {
+				const config = c.get('config');
+				const storage = config.storage;
 
-			const registration = await c.req.json();
+				const registration = c.req.valid('json');
+				registration.address = registration.address.toLowerCase();
 
-			// TODO authentication of address
-			await storage.recordSubscription(registration.address, registration.domain, registration.subscription);
-			return c.json({succes: true, registered: true});
-		})
+				// TODO authentication of address
+				await storage.recordSubscription(registration.address, registration.domain, registration.subscription);
+				return c.json({succes: true, registered: true});
+			},
+		)
 		.get('/registered/:address/:domain/:subscriptionID', async (c) => {
 			const config = c.get('config');
 			const storage = config.storage;
@@ -55,7 +64,7 @@ export function getAPI(options: ServerOptions) {
 		.post('/push', typiaValidator('json', createValidate<Push>()), async (c) => {
 			const config = c.get('config');
 			const storage = config.storage;
-			const push = await c.req.json();
+			const push = c.req.valid('json');
 			// TODO authentication via tokens
 			const subscriptions = await storage.getSubscriptions(push.address, push.domain);
 			const toDelete: string[] = [];
@@ -93,7 +102,7 @@ export function getAPI(options: ServerOptions) {
 
 			if (toDelete.length > 0) {
 				for (const d of toDelete) {
-					await storage.removeSubscription(push.address, push.domain, d);
+					await storage.removeSubscription(d);
 				}
 			}
 

@@ -9,6 +9,6 @@ export type ServerOptions = {
 
 export type Subscription = {
 	endpoint: string;
-	expirationTime?: number;
+	expirationTime: number | null;
 	keys: {p256dh: string; auth: string};
 };

@@ -3,7 +3,7 @@ export type Urgency = 'low' | 'normal' | 'high';
 export type PushSubscription = {
 	endpoint: string;
 	/** DOMHighResTimeStamp */
-	expirationTime?: number;
+	expirationTime: number | null;
 	keys: {
 		auth: string;
 		p256dh: string;

@@ -19,7 +19,7 @@ export class RemoteSQLStorage implements Storage {
 
 	async recordSubscription(address: string, domain: string, subscription: Subscription): Promise<void> {
 		const sqlStatement = `INSERT INTO Subscriptions (address, domain, subscriptionID, subscription, timestamp, expiry) 
-		 VALUES(?1, ?2, ?3, ?4, UNIXTIMESTAMP(), ?5);`;
+		 VALUES(?1, ?2, ?3, ?4, UNIXEPOCH(), ?5);`;
 		const statement = this.db.prepare(sqlStatement);
 		await statement
 			.bind(
@@ -40,17 +40,16 @@ export class RemoteSQLStorage implements Storage {
 		});
 	}
 
-	async removeSubscription(address: string, domain: string, subscriptionID: string): Promise<void> {
-		const statement = this.db.prepare(
-			`DELETE * FROM Subscriptions WHERE address = ?1 AND domain = ?2 AND subscriptionID = ?3;`,
-		);
-		await statement.bind(address, domain, subscriptionID).all<Subscription>();
+	async removeSubscription(subscriptionID: string): Promise<void> {
+		const statement = this.db.prepare(`DELETE * FROM Subscriptions WHERE subscriptionID = ?1;`);
+		await statement.bind(subscriptionID).all<Subscription>();
 	}
 
 	async getSubscription(address: string, domain: string, subscriptionID: string): Promise<Subscription | undefined> {
 		const statement = this.db.prepare(
 			`SELECT * FROM Subscriptions WHERE address = ?1 AND domain = ?2 AND subscriptionID = ?3;`,
 		);
+		console.log(subscriptionID);
 		const {results} = await statement.bind(address, domain, subscriptionID).all<SubscriptionInDB>();
 		if (results.length === 0) {
 			return undefined;

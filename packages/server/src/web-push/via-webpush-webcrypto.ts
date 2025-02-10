@@ -10,7 +10,7 @@ export async function sendNotification(
 		topic,
 		urgency,
 		ttl,
-	}: {vapidKeys: VapidKeys; subject: string; topic?: string; urgency: Urgency; ttl?: number},
+	}: {vapidKeys: VapidKeys; subject: string; topic?: string; urgency?: Urgency; ttl?: number},
 ): Promise<Response> {
 	if (!subject.startsWith('mailto:')) {
 		throw new Error(`except mailto:<email>`);

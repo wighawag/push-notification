@@ -23,7 +23,7 @@ export type PushNotificationsState =
 			loading: boolean;
 	  };
 
-type PrivateAccount = { address: string; privateKey: string };
+type PrivateAccount = { address: string; privateKey: string } | undefined;
 
 export function createPushNotificationStore(params: {
 	serverPublicKey: string;
@@ -35,7 +35,13 @@ export function createPushNotificationStore(params: {
 	async function getSubscriptionState(
 		registration: ServiceWorkerRegistration,
 		account: PrivateAccount
-	): Promise<SettledPushNotificationsState> {
+	): Promise<PushNotificationsState> {
+		if (!account) {
+			return {
+				settled: false,
+				loading: false
+			};
+		}
 		const subscription = await registration.pushManager.getSubscription();
 		if (subscription) {
 			const accountAddress = account.address;
@@ -125,30 +131,7 @@ export function createPushNotificationStore(params: {
 						return;
 					}
 
-					let registeredOnServer = false;
-					try {
-						const response = await fetch(`${params.serverEndpoint}/register`, {
-							method: 'POST',
-							body: JSON.stringify({
-								address: _account.address,
-								domain: domain,
-								subscription: subscription.toJSON()
-							})
-						});
-						if (response.ok) {
-							const json = await response.json();
-							if (_account?.address != accountBeingUsed) {
-								// changed in between
-								return;
-							}
-							registeredOnServer = json.registered;
-						}
-					} catch (err) {
-						// TODO
-						// show error ?
-					}
-
-					setState({ settled: true, subscription, subscribing: false, registeredOnServer });
+					await _registerOnServer(_account.address, subscription);
 				})
 				.catch(function (error) {
 					setState({ settled: true, subscription: undefined, subscribing: false, error });
@@ -158,11 +141,49 @@ export function createPushNotificationStore(params: {
 		}
 	}
 
+	async function _registerOnServer(address: string, subscription: PushSubscription) {
+		let registeredOnServer = false;
+		try {
+			const response = await fetch(`${params.serverEndpoint}/register`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					address,
+					domain: domain,
+					subscription: subscription.toJSON()
+				})
+			});
+			if (response.ok) {
+				const json = await response.json();
+				if (_account?.address != address) {
+					// changed in between
+					return;
+				}
+				registeredOnServer = json.registered;
+			}
+		} catch (err) {
+			// TODO
+			// show error ?
+		}
+
+		setState({ settled: true, subscription, subscribing: false, registeredOnServer });
+	}
+
+	function registerOnServer() {
+		if (_state.settled && _state.subscription && _account?.address) {
+			_registerOnServer(_account.address, _state.subscription);
+		} else {
+			throw new Error(`not ready`);
+		}
+	}
+
 	function acknowledgeError() {
 		if ('error' in _state && _state.error) {
 			setState({ ..._state, error: undefined });
 		}
 	}
 
-	return { subscribe, refresh, subscribeToPush, acknowledgeError };
+	return { subscribe, refresh, subscribeToPush, registerOnServer, acknowledgeError };
 }
