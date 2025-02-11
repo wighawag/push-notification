@@ -5,9 +5,15 @@ import { urlB64ToUint8Array } from './utils';
 export type SettledPushNotificationsState =
 	| {
 			settled: true;
+			denied: true;
+			error?: any;
+	  }
+	| {
+			settled: true;
 			subscription: PushSubscription;
 			subscribing: false;
 			registeredOnServer: boolean;
+			error?: any;
 	  }
 	| {
 			settled: true;
@@ -21,6 +27,7 @@ export type PushNotificationsState =
 	| {
 			settled: false;
 			loading: boolean;
+			error?: any;
 	  };
 
 type PrivateAccount = { address: string; privateKey: string } | undefined;
@@ -57,6 +64,12 @@ export function createPushNotificationStore(params: {
 				registeredOnServer: registrationResult.registered
 			};
 		} else {
+			if (Notification.permission === 'denied') {
+				return {
+					settled: true,
+					denied: true
+				};
+			}
 			return {
 				settled: true,
 				subscription: undefined,
@@ -112,8 +125,16 @@ export function createPushNotificationStore(params: {
 	}
 
 	function subscribeToPush() {
-		if (_state.settled && _state.subscription) {
-			throw new Error(`already subscribed`);
+		if (_state.settled && 'subscription' in _state && _state.subscription) {
+			// throw new Error(`already subscribed`);
+			setState({ ..._state, error: 'already subscribed' });
+			return;
+		}
+
+		if (_state.settled && 'denied' in _state && _state.denied) {
+			// throw new Error(`subscription denied`);
+			setState({ ..._state, error: 'subscription denied' });
+			return;
 		}
 		const applicationServerKey = urlB64ToUint8Array(params.serverPublicKey);
 		if (_account && _serviceWorker && _serviceWorker.registration) {
@@ -134,7 +155,15 @@ export function createPushNotificationStore(params: {
 					await _registerOnServer(_account.address, subscription);
 				})
 				.catch(function (error) {
-					setState({ settled: true, subscription: undefined, subscribing: false, error });
+					if (Notification.permission === 'denied') {
+						setState({ settled: true, denied: true });
+						return {
+							settled: true,
+							denied: true
+						};
+					} else {
+						setState({ settled: true, subscription: undefined, subscribing: false, error });
+					}
 				});
 		} else {
 			throw new Error(`account or service worker not set`);
@@ -172,7 +201,7 @@ export function createPushNotificationStore(params: {
 	}
 
 	function registerOnServer() {
-		if (_state.settled && _state.subscription && _account?.address) {
+		if (_state.settled && 'subscription' in _state && _state.subscription && _account?.address) {
 			_registerOnServer(_account.address, _state.subscription);
 		} else {
 			throw new Error(`not ready`);
@@ -185,5 +214,22 @@ export function createPushNotificationStore(params: {
 		}
 	}
 
-	return { subscribe, refresh, subscribeToPush, registerOnServer, acknowledgeError };
+	async function testPush(message: string) {
+		const response = await fetch(`${params.serverEndpoint}/push`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				address: _account?.address,
+				domain,
+				message
+			})
+		});
+		const text = await response.text();
+		console.log({ text });
+		return response.ok;
+	}
+
+	return { subscribe, refresh, subscribeToPush, registerOnServer, acknowledgeError, testPush };
 }

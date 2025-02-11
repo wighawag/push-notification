@@ -41,7 +41,7 @@ export class RemoteSQLStorage implements Storage {
 	}
 
 	async removeSubscription(subscriptionID: string): Promise<void> {
-		const statement = this.db.prepare(`DELETE * FROM Subscriptions WHERE subscriptionID = ?1;`);
+		const statement = this.db.prepare(`DELETE FROM Subscriptions WHERE subscriptionID = ?1;`);
 		await statement.bind(subscriptionID).all<Subscription>();
 	}
 

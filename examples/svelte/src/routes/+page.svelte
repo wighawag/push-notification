@@ -8,6 +8,12 @@
 	function registerOnServer() {
 		pushNotifications.registerOnServer();
 	}
+
+	function push() {
+		pushNotifications.testPush(message);
+	}
+
+	let message = 'hello';
 </script>
 
 {$dummyAccount?.address}
@@ -18,10 +24,10 @@
 <hr />
 
 {#if $pushNotifications.settled}
-	{#if !$pushNotifications.subscription && $pushNotifications.error}
+	{#if $pushNotifications.error}
 		{$pushNotifications.error}
 		<button class="btn" onclick={() => pushNotifications.acknowledgeError()}>ok</button>
-	{:else}
+	{:else if 'subscription' in $pushNotifications}
 		<button
 			class="btn"
 			disabled={!!$pushNotifications.subscription || $pushNotifications.subscribing}
@@ -31,9 +37,16 @@
 		{#if $pushNotifications.subscription && !$pushNotifications.registeredOnServer}
 			<button class="btn" onclick={registerOnServer}>link account</button>
 		{/if}
+	{:else if $pushNotifications.denied}
+		Push notifications were denied.
 	{/if}
 {:else if $pushNotifications.loading}
 	please wait...
 {:else}
 	No account
 {/if}
+
+<hr />
+
+<input type="text" bind:value={message} />
+<button class="btn" onclick={push}>push</button>

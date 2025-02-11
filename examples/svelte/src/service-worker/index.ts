@@ -190,3 +190,33 @@ async function getResponse(event: FetchEvent): Promise<Response> {
 sw.addEventListener('fetch', (event: FetchEvent) => {
 	event.respondWith(getResponse(event));
 });
+
+// ------------------------------------------------------------------------------------------------
+// PUSH NOTIFICATIONS
+// ------------------------------------------------------------------------------------------------
+
+sw.addEventListener('push', function (event: PushEvent) {
+	log('Push Received.');
+	const data = event.data?.text();
+	log(`Push had this data: "${data}"`);
+
+	// TODO json
+
+	const title = 'Example';
+	const options = {
+		body: data,
+		icon: '/favicon.png',
+		badge: '/favicon.png'
+	};
+
+	event.waitUntil(sw.registration.showNotification(title, options));
+});
+
+sw.addEventListener('notificationclick', function (event: NotificationEvent) {
+	log(`Notification click received.`);
+
+	event.notification.close();
+
+	// TODO add notification specifics to deep link
+	event.waitUntil(sw.clients.openWindow(`${self.location.protocol}//${self.location.host}`));
+});

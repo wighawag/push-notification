@@ -65,10 +65,12 @@ export function getAPI(options: ServerOptions) {
 			const config = c.get('config');
 			const storage = config.storage;
 			const push = c.req.valid('json');
+			push.address = push.address.toLowerCase();
 			// TODO authentication via tokens
 			const subscriptions = await storage.getSubscriptions(push.address, push.domain);
 			const toDelete: string[] = [];
 
+			let oneSuccess = false;
 			const failedSubscriptions: Subscription[] = [];
 			for (const subscription of subscriptions) {
 				if (subscription.expirationTime && subscription.expirationTime < Date.now() / 1000) {
@@ -84,18 +86,24 @@ export function getAPI(options: ServerOptions) {
 						topic: push.topic,
 					});
 
-					if (response.status === 410) {
-						// Gone
-						toDelete.push(subscription.endpoint);
-					} else if (response.status === 404) {
-						// 404
-						toDelete.push(subscription.endpoint);
-					} else if (response.status < 200 || response.status >= 300) {
-						logger.error(`Could Not push (${response.status}) : ${response.body}`);
-						if (response.status >= 500 && response.status < 600) {
-							// TODO Retry
+					if (response.ok) {
+						oneSuccess = true;
+					} else {
+						if (response.status === 410) {
+							// Gone
+							toDelete.push(subscription.endpoint);
+						} else if (response.status === 404) {
+							// 404
+							toDelete.push(subscription.endpoint);
+						} else {
+							logger.error(`Could Not push (${response.status}) : ${response.body}`);
+							if (response.status >= 500 && response.status < 600) {
+								// TODO Retry
+							}
+							failedSubscriptions.push(subscription);
 						}
-						failedSubscriptions.push(subscription);
+
+						console.log(await response.text());
 					}
 				}
 			}
@@ -113,7 +121,11 @@ export function getAPI(options: ServerOptions) {
 					failedPush: failedSubscriptions.length,
 				});
 			} else {
-				return c.json({success: true});
+				return c.json({
+					success: oneSuccess,
+					successfullPush: subscriptions.length - failedSubscriptions.length,
+					deletedSubscriptions: toDelete.length,
+				});
 			}
 		});
 
