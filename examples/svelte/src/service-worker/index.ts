@@ -5,6 +5,8 @@
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
+const ID = '25';
+
 import { build, version, prerendered, files } from '$service-worker';
 
 // ------------------- CONFIG ---------------------------
@@ -20,23 +22,24 @@ if (OFFLINE_CACHE === 'all') {
 let _logEnabled = true; // TODO false
 function log(...args: any[]) {
 	if (_logEnabled) {
-		console.debug(`[Service Worker] ${args[0]}`, ...args.slice(2));
+		console.debug(`[Service Worker #${ID}] ${args[0]}`, ...args.slice(2));
 	}
 }
 
 // Create a unique cache name for this deployment
 const CACHE_NAME = `cache-${version}`;
 
-sw.addEventListener('message', function (event) {
+sw.addEventListener('message', async function (event) {
 	if (event.data && event.data.type === 'debug') {
 		_logEnabled = event.data.enabled && event.data.level >= 5;
 		if (_logEnabled) {
 			log(`log enabled ${event.data.level}`);
 		}
+	} else if (event.data && event.data.type === 'ping') {
+		log('pong');
 	} else if (event.data === 'skipWaiting') {
 		log(`skipWaiting received`);
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(self as any).skipWaiting();
+		event.waitUntil(sw.skipWaiting());
 	}
 });
 
@@ -48,7 +51,7 @@ if (DEV) {
 const regexesOnlineOnly: string[] = [];
 
 const regexesCacheFirst = [
-	self.location.origin,
+	sw.location.origin,
 	// 'https://rsms.me/inter/', // TODO remove, used if using font from there
 	'cdn',
 	'.*\\.png$',
@@ -59,7 +62,7 @@ const regexesCacheOnly: string[] = [];
 
 // If the url doesn't match any of those regexes, it will do online first
 
-log(`Origin: ${self.location.origin}`);
+log(`Origin: ${sw.location.origin}`);
 
 sw.addEventListener('install', (event) => {
 	log('Install');
@@ -71,7 +74,7 @@ sw.addEventListener('install', (event) => {
 				return cache.addAll(ASSETS);
 			})
 			.then(() => {
-				// (self as any).skipWaiting();
+				// sw.skipWaiting();
 				log(`cache fully fetched!`);
 			})
 	);
@@ -88,7 +91,7 @@ sw.addEventListener('activate', (event) => {
 						return caches.delete(thisCacheName);
 					}
 				})
-			).then(() => (self as any).clients.claim());
+			).then(() => sw.clients.claim());
 		})
 	);
 });
@@ -155,13 +158,13 @@ const onlineOnly = {
 async function getResponse(event: FetchEvent): Promise<Response> {
 	const request = event.request;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const registration = (self as any).registration as ServiceWorkerRegistration;
+	const registration = sw.registration;
 	if (
 		event.request.mode === 'navigate' &&
 		event.request.method === 'GET' &&
 		registration.waiting &&
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(await (self as any).clients.matchAll()).length < 2
+		(await sw.clients.matchAll()).length < 2
 	) {
 		log('only one client, skipWaiting as we navigate the page');
 		registration.waiting.postMessage('skipWaiting');
@@ -195,23 +198,42 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
 // PUSH NOTIFICATIONS
 // ------------------------------------------------------------------------------------------------
 
-async function checkClientIsVisible(): Promise<boolean> {
+async function getClientsStatus(): Promise<{
+	atLeastOneVisible: boolean;
+	atLeastOneFocused: boolean;
+	atLeastOneVisibleAndFocused: boolean;
+}> {
 	const windowClients = await sw.clients.matchAll({
 		type: 'window',
 		includeUncontrolled: true
 	});
 
+	let atLeastOneVisible = false;
+	let atLeastOneFocused = false;
+	let atLeastOneVisibleAndFocused = false;
 	for (var i = 0; i < windowClients.length; i++) {
-		if (windowClients[i].visibilityState === 'visible') {
-			return true;
+		const visible = windowClients[i].visibilityState === 'visible';
+		const hasFocus = windowClients[i].focused;
+		if (visible) {
+			atLeastOneVisible = true;
+		}
+		if (hasFocus) {
+			atLeastOneFocused = true;
+		}
+		if (hasFocus && visible) {
+			atLeastOneVisibleAndFocused = true;
 		}
 	}
 
-	return false;
+	return {
+		atLeastOneFocused,
+		atLeastOneVisible,
+		atLeastOneVisibleAndFocused
+	};
 }
 
 async function handlePush(data?: string) {
-	const appActive = await checkClientIsVisible();
+	const appActive = await getClientsStatus();
 
 	const title = 'Example';
 	const options = {
@@ -219,7 +241,7 @@ async function handlePush(data?: string) {
 		icon: '/favicon.png',
 		badge: '/favicon.png'
 	};
-	if (appActive) {
+	if (appActive.atLeastOneVisibleAndFocused) {
 		// TODO show notification in app
 	} else {
 		await sw.registration.showNotification(title, options);

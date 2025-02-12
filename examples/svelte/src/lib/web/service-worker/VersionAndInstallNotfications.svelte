@@ -7,22 +7,12 @@
 	export let alt: string;
 
 	function skip() {
-		$serviceWorker.updateAvailable = false;
+		serviceWorker.skip();
 	}
 
 	function accept() {
 		console.log(`accepting update...`);
-		if ($serviceWorker.updateAvailable && $serviceWorker.registration) {
-			if ($serviceWorker.registration.waiting) {
-				console.log(`was waiting, skipping...`);
-				$serviceWorker.registration.waiting.postMessage('skipWaiting');
-			} else {
-				console.log(`was not waiting, should we reload?`);
-				console.error(`not waiting..., todo reload?`);
-				// window.location.reload();
-			}
-			$serviceWorker.updateAvailable = false;
-		}
+		serviceWorker.skipWaiting();
 	}
 </script>
 
