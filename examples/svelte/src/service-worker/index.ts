@@ -195,12 +195,23 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
 // PUSH NOTIFICATIONS
 // ------------------------------------------------------------------------------------------------
 
-sw.addEventListener('push', function (event: PushEvent) {
-	log('Push Received.');
-	const data = event.data?.text();
-	log(`Push had this data: "${data}"`);
+async function checkClientIsVisible(): Promise<boolean> {
+	const windowClients = await sw.clients.matchAll({
+		type: 'window',
+		includeUncontrolled: true
+	});
 
-	// TODO json
+	for (var i = 0; i < windowClients.length; i++) {
+		if (windowClients[i].visibilityState === 'visible') {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+async function handlePush(data?: string) {
+	const appActive = await checkClientIsVisible();
 
 	const title = 'Example';
 	const options = {
@@ -208,15 +219,36 @@ sw.addEventListener('push', function (event: PushEvent) {
 		icon: '/favicon.png',
 		badge: '/favicon.png'
 	};
-
-	event.waitUntil(sw.registration.showNotification(title, options));
+	if (appActive) {
+		// TODO show notification in app
+	} else {
+		await sw.registration.showNotification(title, options);
+	}
+}
+sw.addEventListener('push', function (event: PushEvent) {
+	const data = event.data?.text();
+	event.waitUntil(handlePush(data));
 });
 
-sw.addEventListener('notificationclick', function (event: NotificationEvent) {
-	log(`Notification click received.`);
-
-	event.notification.close();
+async function handleNotificationClick() {
+	const windowClients = await sw.clients.matchAll({
+		type: 'window',
+		includeUncontrolled: true
+	});
 
 	// TODO add notification specifics to deep link
-	event.waitUntil(sw.clients.openWindow(`${self.location.protocol}//${self.location.host}`));
+
+	for (const client of windowClients) {
+		log(`${'focus' in client ? 'focus-available: ' : ''}: ${client.url}`);
+		// TODO url checks: client.url === '/' &&  ?
+		if ('focus' in client) {
+			return client.focus();
+		}
+	}
+	if (sw.clients.openWindow) return sw.clients.openWindow('/');
+}
+
+sw.addEventListener('notificationclick', function (event: NotificationEvent) {
+	event.notification.close();
+	event.waitUntil(handleNotificationClick());
 });
