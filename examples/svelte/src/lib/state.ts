@@ -2,6 +2,7 @@ import { get, writable } from 'svelte/store';
 import { PUBLIC_VAPID_SERVER_PUBLIC_KEY } from './config';
 import { createPushNotificationStore } from './web/service-worker/push-notifications';
 import { privateKeyToAddress } from 'viem/accounts';
+import { createServiceWorkerStore } from './web/service-worker';
 
 const accountsPrivateKeys = [
 	'0xedc1b70e424ba5ba048248afd5c1a69c37e83db9c91381443e109acb5cb2b29a',
@@ -36,14 +37,18 @@ export const dummyAccount = {
 	disableAccount
 };
 
+export const serviceWorker = createServiceWorkerStore();
+
 export const pushNotifications = createPushNotificationStore({
 	serverEndpoint: 'http://localhost:34005/api',
 	serverPublicKey: PUBLIC_VAPID_SERVER_PUBLIC_KEY,
 	domain: 'push-notifications-example.etherplay.io',
-	account: dummyAccount
+	account: dummyAccount,
+	serviceWorker
 });
 
 (globalThis as any).state = {
-	pushNotifications
+	pushNotifications,
+	serviceWorker
 };
 (globalThis as any).get = get;

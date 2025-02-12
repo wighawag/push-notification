@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { dummyAccount, pushNotifications } from '$lib/state';
-	import { serviceWorker } from '$lib/web/service-worker';
+	import { dummyAccount, pushNotifications, serviceWorker } from '$lib/state';
 
 	function subscribe() {
 		pushNotifications.subscribeToPush();

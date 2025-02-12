@@ -50,7 +50,7 @@ export type ServiceWorkerState =
 			registering: false;
 	  };
 
-function createServiceWorkerStore() {
+export function createServiceWorkerStore() {
 	const store = writable<ServiceWorkerState>({
 		loading: true
 	});
@@ -232,8 +232,3 @@ function createServiceWorkerStore() {
 		skip
 	};
 }
-
-// allow to test service worker notifcation by executing the following in the console:
-// serviceWorker.update(v => {v.updateAvailable = true; v.registration = "anything"; return v});
-export const serviceWorker = createServiceWorkerStore();
-(globalThis as any).serviceWorker = serviceWorker;

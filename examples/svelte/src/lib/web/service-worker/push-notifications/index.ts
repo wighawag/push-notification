@@ -1,5 +1,5 @@
 import { derived, type Readable } from 'svelte/store';
-import { serviceWorker, type ServiceWorkerState } from '..';
+import { type ServiceWorkerState } from '..';
 import { urlB64ToUint8Array } from './utils';
 
 export type SettledPushNotificationsState =
@@ -37,6 +37,7 @@ export function createPushNotificationStore(params: {
 	serverEndpoint: string;
 	domain: string;
 	account: Readable<PrivateAccount>;
+	serviceWorker: Readable<ServiceWorkerState>;
 }) {
 	const domain = params.domain;
 	async function getSubscriptionState(
@@ -117,7 +118,7 @@ export function createPushNotificationStore(params: {
 		[Readable<ServiceWorkerState>, Readable<PrivateAccount>],
 		PushNotificationsState
 	>(
-		[serviceWorker, params.account],
+		[params.serviceWorker, params.account],
 		([$serviceWorker, $account], set) => {
 			_account = $account;
 			_serviceWorker = $serviceWorker;
