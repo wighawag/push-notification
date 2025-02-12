@@ -6,6 +6,8 @@
 
 import { build, version, prerendered, files } from '$service-worker';
 
+const ID = version; // + '-1';
+
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 // ------------------- CONFIG ---------------------------
@@ -21,7 +23,7 @@ if (OFFLINE_CACHE === 'all') {
 let _logEnabled = true; // TODO false
 function log(...args: any[]) {
 	if (_logEnabled) {
-		console.debug(`[Service Worker #${version}] ${args[0]}`, ...args.slice(2));
+		console.debug(`[Service Worker #${ID}] ${args[0]}`, ...args.slice(2));
 	}
 }
 

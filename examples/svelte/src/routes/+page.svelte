@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { dummyAccount, pushNotifications } from '$lib/state';
+	import { serviceWorker } from '$lib/web/service-worker';
 
 	function subscribe() {
 		pushNotifications.subscribeToPush();
@@ -19,6 +20,8 @@
 {$dummyAccount?.address}
 <button class="btn" onclick={() => dummyAccount.switchAccount()}>switch</button>
 <button class="btn" onclick={() => dummyAccount.disableAccount()}>disable</button>
+<hr />
+{JSON.stringify($serviceWorker, (k, v) => (k === 'subscription' ? !!v : v), 2)}
 <hr />
 {JSON.stringify($pushNotifications, (k, v) => (k === 'subscription' ? !!v : v), 2)}
 <hr />

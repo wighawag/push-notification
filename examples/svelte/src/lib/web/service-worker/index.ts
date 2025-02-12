@@ -1,33 +1,83 @@
 import { dev } from '$app/environment';
 import { get, writable } from 'svelte/store';
+import type { Logger } from 'named-logs';
+import { logs } from 'named-logs';
+import { base } from '$app/paths';
+import { handleAutomaticUpdate, listenForWaitingServiceWorker } from './utils';
 
-export type ServiceWorkerState = {
-	registration?: ServiceWorkerRegistration;
-	updateAvailable: boolean;
+const logger = logs('service-worker') as Logger & {
+	level: number;
+	enabled: boolean;
 };
+
+function updateLoggingForWorker(worker: ServiceWorker | null) {
+	if (worker) {
+		if (logger.enabled) {
+			logger.debug(`enabling logging for service worker, level: ${logger.level}`);
+		} else {
+			logger.debug(`disabling logging for service worker, level: ${logger.level}`);
+		}
+		worker.postMessage({
+			type: 'debug',
+			level: logger.level,
+			enabled: logger.enabled
+		});
+	}
+}
+
+const IDLE_DELAY_MS = 3 * 60 * 1000;
+const CHECK_DELAY_MS = 30 * 60 * 1000;
+
+export type ServiceWorkerState =
+	| {
+			loading: true;
+	  }
+	| {
+			loading: false;
+			notSupported: true;
+	  }
+	| {
+			loading: false;
+			notSupported: false;
+			registering: true;
+	  }
+	| {
+			registration?: ServiceWorkerRegistration;
+			updateAvailable: boolean;
+			// registering: boolean;
+			loading: false;
+			notSupported: false;
+			registering: false;
+	  };
 
 function createServiceWorkerStore() {
 	const store = writable<ServiceWorkerState>({
-		registration: undefined,
-		updateAvailable: false
+		loading: true
 	});
 
 	function pingServideWorker(state: 'installing' | 'waiting' | 'active' = 'active') {
-		const $serviceWorker = get(store);
-		const registration = $serviceWorker.registration;
-		if (!registration) {
-			throw new Error(`no registration`);
-		}
-		if (!registration[state]) {
-			throw new Error(`no registration in state: ${state}`);
-		}
-		registration[state].postMessage({
-			type: 'ping'
-		});
+		sendMessage(
+			{
+				type: 'ping'
+			},
+			state
+		);
 	}
 
-	function sendMessage(message: string, state: 'installing' | 'waiting' | 'active' = 'active') {
+	function sendMessage(
+		message: string | object,
+		state: 'installing' | 'waiting' | 'active' = 'active'
+	) {
 		const $serviceWorker = get(store);
+		if ($serviceWorker.loading) {
+			throw new Error(`not loaded`);
+		}
+		if ($serviceWorker.notSupported) {
+			throw new Error(`not supported`);
+		}
+		if ($serviceWorker.registering) {
+			throw new Error(`is registering...`);
+		}
 		const registration = $serviceWorker.registration;
 		if (!registration) {
 			throw new Error(`no registration`);
@@ -39,8 +89,17 @@ function createServiceWorkerStore() {
 	}
 
 	function skipWaiting() {
-		console.log(`accepting update...`);
+		logger.log(`accepting update...`);
 		const $serviceWorker = get(store);
+		if ($serviceWorker.loading) {
+			throw new Error(`not loaded`);
+		}
+		if ($serviceWorker.notSupported) {
+			throw new Error(`not supported`);
+		}
+		if ($serviceWorker.registering) {
+			throw new Error(`is registering...`);
+		}
 		if ($serviceWorker.updateAvailable && $serviceWorker.registration) {
 			const registration = $serviceWorker.registration;
 			if (!registration) {
@@ -48,33 +107,125 @@ function createServiceWorkerStore() {
 			}
 
 			if (registration.waiting) {
-				console.log(`was waiting, skipping...`);
+				logger.log(`was waiting, skipping...`);
 				registration.waiting.postMessage('skipWaiting');
 			} else {
-				console.log(`was not waiting, should we reload?`);
-				console.error(`not waiting..., todo reload?`);
+				logger.log(`was not waiting, should we reload?`);
+				logger.error(`not waiting..., todo reload?`);
 				// window.location.reload();
 			}
 
 			if (!dev) {
-				console.log(`update store`);
-				store.set({ updateAvailable: false });
+				logger.log(`update store`);
+				store.set({
+					loading: false,
+					notSupported: false,
+					updateAvailable: false,
+					registration: $serviceWorker.registration,
+					registering: $serviceWorker.registering
+				});
 			}
 		}
 	}
 
 	function skip() {
-		store.set({ updateAvailable: false });
+		const $serviceWorker = get(store);
+		if ($serviceWorker.loading) {
+			throw new Error(`not loaded`);
+		}
+		if ($serviceWorker.notSupported) {
+			throw new Error(`not supported`);
+		}
+		if ($serviceWorker.registering) {
+			throw new Error(`is registering...`);
+		}
+		store.set({
+			loading: false,
+			notSupported: false,
+			updateAvailable: false,
+			registration: $serviceWorker.registration,
+			registering: $serviceWorker.registering
+		});
 	}
+
+	function register() {
+		if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+			store.set({ loading: false, notSupported: false, registering: true });
+
+			// ------------------------------------------------------------------------------------------------
+			// FORCE RELOAD ON CONTROLLER CHANGE
+			// ------------------------------------------------------------------------------------------------
+			let refreshing = false;
+			navigator.serviceWorker.addEventListener('controllerchange', () => {
+				if (refreshing) {
+					return;
+				}
+				refreshing = true;
+				window.location.reload();
+			});
+			// ------------------------------------------------------------------------------------------------
+
+			const swLocation = `${base}/service-worker.js`;
+			//{scope: `${base}/`}
+			navigator.serviceWorker
+				.register(swLocation, {
+					type: dev ? 'module' : 'classic'
+				})
+				.then((registration) => {
+					try {
+						handleAutomaticUpdate(registration, { idle: IDLE_DELAY_MS, checks: CHECK_DELAY_MS });
+					} catch (e) {}
+
+					store.set({
+						loading: false,
+						notSupported: false,
+						updateAvailable: false,
+						registration: registration,
+						registering: false
+					});
+					updateLoggingForWorker(registration.installing);
+					updateLoggingForWorker(registration.waiting);
+					updateLoggingForWorker(registration.active);
+					listenForWaitingServiceWorker(registration, () => {
+						store.set({
+							loading: false,
+							notSupported: false,
+							updateAvailable: true,
+							registration: registration,
+							registering: false
+						});
+					});
+				})
+				.catch((e) => {
+					logger.error('Failed to register service worker', e);
+				});
+		} else {
+			if (typeof window !== 'undefined') {
+				store.set({ loading: false, notSupported: true });
+			}
+		}
+	}
+
 	return {
 		subscribe: store.subscribe,
 		set: store.set, // TODO remove and move handler logic in here
 		get registration(): ServiceWorkerRegistration | undefined {
-			return get(store).registration;
+			const $serviceWorker = get(store);
+			if ('registration' in $serviceWorker) {
+				return $serviceWorker.registration;
+			} else {
+				return undefined;
+			}
 		},
 		get updateAvailable(): boolean {
-			return get(store).updateAvailable;
+			const $serviceWorker = get(store);
+			if ('updateAvailable' in $serviceWorker) {
+				return $serviceWorker.updateAvailable;
+			} else {
+				return false;
+			}
 		},
+		register,
 		pingServideWorker,
 		sendMessage,
 		skipWaiting,
