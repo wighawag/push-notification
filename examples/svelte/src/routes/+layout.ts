@@ -1,10 +1,7 @@
 import { serviceWorker } from '$lib/state';
+import { onDocumentLoaded } from '$lib/web/utils';
 
 export const prerender = true;
 export const trailingSlash = 'always';
 
-if (typeof document !== 'undefined') {
-	document.addEventListener('load', function () {
-		serviceWorker.register();
-	});
-}
+onDocumentLoaded(serviceWorker.register);
