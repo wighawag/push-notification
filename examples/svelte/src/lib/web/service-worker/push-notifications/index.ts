@@ -93,7 +93,14 @@ export function createPushNotificationStore(params: {
 	}
 
 	function updateState() {
-		if (_account && _serviceWorker && _serviceWorker.registration) {
+		if (
+			_account &&
+			_serviceWorker &&
+			!_serviceWorker.loading &&
+			!_serviceWorker.notSupported &&
+			!_serviceWorker.registering &&
+			_serviceWorker.registration
+		) {
 			setState({ settled: false, loading: true });
 			const inner = (guard = {});
 			Promise.resolve(getSubscriptionState(_serviceWorker.registration, _account)).then((value) => {
@@ -137,7 +144,14 @@ export function createPushNotificationStore(params: {
 			return;
 		}
 		const applicationServerKey = urlB64ToUint8Array(params.serverPublicKey);
-		if (_account && _serviceWorker && _serviceWorker.registration) {
+		if (
+			_account &&
+			_serviceWorker &&
+			!_serviceWorker.loading &&
+			!_serviceWorker.notSupported &&
+			!_serviceWorker.registering &&
+			_serviceWorker.registration
+		) {
 			const accountBeingUsed = _account.address;
 			setState({ settled: true, subscribing: true, subscription: undefined });
 			_serviceWorker.registration.pushManager
