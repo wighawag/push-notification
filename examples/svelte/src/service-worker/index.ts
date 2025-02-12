@@ -2,12 +2,11 @@
 /// <reference no-default-lib="true"/>
 /// <reference lib="esnext" />
 /// <reference lib="webworker" />
-
-const sw = self as unknown as ServiceWorkerGlobalScope;
-
-const ID = '25';
+/// <reference types="../../.svelte-kit/ambient.d.ts" />
 
 import { build, version, prerendered, files } from '$service-worker';
+
+const sw = self as unknown as ServiceWorkerGlobalScope;
 
 // ------------------- CONFIG ---------------------------
 const DEV = true;
@@ -22,26 +21,12 @@ if (OFFLINE_CACHE === 'all') {
 let _logEnabled = true; // TODO false
 function log(...args: any[]) {
 	if (_logEnabled) {
-		console.debug(`[Service Worker #${ID}] ${args[0]}`, ...args.slice(2));
+		console.debug(`[Service Worker #${version}] ${args[0]}`, ...args.slice(2));
 	}
 }
 
 // Create a unique cache name for this deployment
 const CACHE_NAME = `cache-${version}`;
-
-sw.addEventListener('message', async function (event) {
-	if (event.data && event.data.type === 'debug') {
-		_logEnabled = event.data.enabled && event.data.level >= 5;
-		if (_logEnabled) {
-			log(`log enabled ${event.data.level}`);
-		}
-	} else if (event.data && event.data.type === 'ping') {
-		log('pong');
-	} else if (event.data === 'skipWaiting') {
-		log(`skipWaiting received`);
-		event.waitUntil(sw.skipWaiting());
-	}
-});
 
 const regexesOnlineFirst: string[] = [];
 if (DEV) {
@@ -96,37 +81,34 @@ sw.addEventListener('activate', (event) => {
 	);
 });
 
-const update = (request: Request, cache?: Response) => {
-	return fetch(request)
-		.then((response) => {
-			return caches
-				.open(CACHE_NAME)
-				.then((cache) => {
-					if (request.method === 'GET' && request.url.startsWith('http')) {
-						// only on http protocol to prevent chrome-extension request to error out
-						cache.put(request, response.clone());
-					}
-					return response;
-				})
-				.catch((err) => {
-					log(`error: ${err}`);
-					return response;
-				});
-		})
-		.catch((err) => {
-			if (cache) {
-				return cache;
-			} else {
-				throw err;
+async function fetchAndUpdateCache(request: Request, cache?: Response) {
+	try {
+		const response = await fetch(request);
+		try {
+			const cache_1 = await caches.open(CACHE_NAME);
+			if (request.method === 'GET' && request.url.startsWith('http')) {
+				// only on http protocol to prevent chrome-extension request to error out
+				cache_1.put(request, response.clone());
 			}
-		});
-};
+			return response;
+		} catch (err) {
+			log(`error: ${err}`);
+			return response;
+		}
+	} catch (err_1) {
+		if (cache) {
+			return cache;
+		} else {
+			throw err_1;
+		}
+	}
+}
 
 const cacheFirst = {
 	method: (request: Request, cache?: Response) => {
 		log(`Cache first: ${request.url}`);
-		const fun = update(request, cache);
-		return cache || fun;
+		const fromNetwork = fetchAndUpdateCache(request, cache);
+		return cache || fromNetwork;
 	},
 	regexes: regexesCacheFirst
 };
@@ -134,7 +116,7 @@ const cacheFirst = {
 const cacheOnly = {
 	method: (request: Request, cache?: Response) => {
 		log(`Cache only: ${request.url}`);
-		return cache || update(request, cache);
+		return cache || fetchAndUpdateCache(request, cache);
 	},
 	regexes: regexesCacheOnly
 };
@@ -142,7 +124,7 @@ const cacheOnly = {
 const onlineFirst = {
 	method: (request: Request, cache?: Response) => {
 		log(`Online first: ${request.url}`);
-		return update(request, cache);
+		return fetchAndUpdateCache(request, cache);
 	},
 	regexes: regexesOnlineFirst
 };
@@ -195,6 +177,29 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
 });
 
 // ------------------------------------------------------------------------------------------------
+// MESSAGES FROM APP
+// ------------------------------------------------------------------------------------------------
+
+sw.addEventListener('message', async function (event) {
+	if (event.data && event.data.type === 'debug') {
+		// enable or disable logging
+		// just need to send a object as message like {type: "debug", enabled: true, level: 5}
+		_logEnabled = event.data.enabled && event.data.level >= 5;
+		if (_logEnabled) {
+			log(`log enabled ${event.data.level}`);
+		}
+	} else if (event.data && event.data.type === 'ping') {
+		// to test replies from service worker and get its versio
+		// see log function
+		log('pong');
+	} else if (event.data === 'skipWaiting') {
+		// force the pending service worker to be activated
+		log(`skipWaiting received`);
+		event.waitUntil(sw.skipWaiting());
+	}
+});
+
+// ------------------------------------------------------------------------------------------------
 // PUSH NOTIFICATIONS
 // ------------------------------------------------------------------------------------------------
 
@@ -235,6 +240,7 @@ async function getClientsStatus(): Promise<{
 async function handlePush(data?: string) {
 	const appActive = await getClientsStatus();
 
+	// TODO define a json format
 	const title = 'Example';
 	const options = {
 		body: data,
