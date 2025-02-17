@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { fakeOwnerAccount, privateAccount, pushNotifications, serviceWorker } from '$lib/state';
+	import {
+		fakeOwnerAccount,
+		privateAccount,
+		storage,
+		pushNotifications,
+		serviceWorker
+	} from '$lib/state';
 
 	function subscribe() {
 		pushNotifications.subscribeToPush();
@@ -25,6 +31,9 @@
 <hr />
 <h3>privateAccount</h3>
 {JSON.stringify($privateAccount, (k, v) => (k === 'privateKey' ? !!v : v), 2)}
+<hr />
+<h3>data</h3>
+{JSON.stringify($storage, null, 2)}
 <hr />
 <h3>serviceWorker</h3>
 {JSON.stringify($serviceWorker, (k, v) => (k === 'subscription' ? !!v : v), 2)}
