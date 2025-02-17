@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
 import { PUBLIC_VAPID_SERVER_PUBLIC_KEY } from './config';
-import { createPushNotificationStore } from './web/service-worker/push-notifications';
-import { createServiceWorkerStore } from './web/service-worker';
+import { createPushNotificationService } from './web/service-worker/push-notifications';
+import { createServiceWorker } from './web/service-worker';
 import { createFakeOwnerAccount } from './fake-owner-account';
 import { createPrivateAccount } from './private-account';
 
@@ -12,9 +12,9 @@ export const privateAccount = createPrivateAccount({
 	skipConfirmation: true
 });
 
-export const serviceWorker = createServiceWorkerStore();
+export const serviceWorker = createServiceWorker();
 
-export const pushNotifications = createPushNotificationStore({
+export const pushNotifications = createPushNotificationService({
 	serverEndpoint: 'http://localhost:34005/api',
 	serverPublicKey: PUBLIC_VAPID_SERVER_PUBLIC_KEY,
 	domain: 'push-notifications-example.etherplay.io',

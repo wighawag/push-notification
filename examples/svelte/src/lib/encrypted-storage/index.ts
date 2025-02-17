@@ -2,7 +2,7 @@ import { derived, type Readable } from 'svelte/store';
 
 type PrivateAccount = { address: string; privateKey: string } | undefined;
 
-export type EncryptedStoreState<Data> =
+export type EncryptedStorage<Data> =
 	| {
 			account: undefined;
 			state: 'Idle';
@@ -19,14 +19,14 @@ export type EncryptedStoreState<Data> =
 			data: Data;
 	  };
 
-export function createEncryptedStore<Data>(params: { account: Readable<PrivateAccount> }) {
+export function createEncryptedStorage<Data>(params: { account: Readable<PrivateAccount> }) {
 	let guard: object | undefined;
 
-	let _state: EncryptedStoreState<Data> = { state: 'Idle', account: undefined, data: undefined };
-	let _set: ((value: EncryptedStoreState<Data>) => void) | undefined;
+	let _state: EncryptedStorage<Data> = { state: 'Idle', account: undefined, data: undefined };
+	let _set: ((value: EncryptedStorage<Data>) => void) | undefined;
 	let _account: PrivateAccount | undefined;
 
-	function setState(newState: EncryptedStoreState<Data>) {
+	function setState(newState: EncryptedStorage<Data>) {
 		_state = newState;
 		if (_set) {
 			_set(newState);
@@ -51,7 +51,7 @@ export function createEncryptedStore<Data>(params: { account: Readable<PrivateAc
 		}
 	}
 
-	const { subscribe } = derived<Readable<PrivateAccount>, EncryptedStoreState<Data>>(
+	const { subscribe } = derived<Readable<PrivateAccount>, EncryptedStorage<Data>>(
 		params.account,
 		($account, set) => {
 			_account = $account;

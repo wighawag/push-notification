@@ -44,7 +44,7 @@ export type ServiceWorkerState =
 			registering: false;
 	  };
 
-export function createServiceWorkerStore() {
+export function createServiceWorker() {
 	const store = writable<ServiceWorkerState>(undefined);
 
 	function pingServideWorker(state: 'installing' | 'waiting' | 'active' = 'active') {

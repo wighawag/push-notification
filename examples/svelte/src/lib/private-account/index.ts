@@ -96,6 +96,7 @@ export function createPrivateAccount<Data>(params: {
 				}
 			}
 		} else {
+			_ownerAccount = undefined;
 			setState(undefined);
 		}
 	}
