@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { dummyAccount, pushNotifications, serviceWorker } from '$lib/state';
+	import { fakeOwnerAccount, privateAccount, pushNotifications, serviceWorker } from '$lib/state';
 
 	function subscribe() {
 		pushNotifications.subscribeToPush();
@@ -16,12 +16,20 @@
 	let message = 'hello';
 </script>
 
-{$dummyAccount?.address}
-<button class="btn" onclick={() => dummyAccount.switchAccount()}>switch</button>
-<button class="btn" onclick={() => dummyAccount.disableAccount()}>disable</button>
+{$fakeOwnerAccount?.address} / {$privateAccount?.signer?.address}
+<button class="btn" onclick={() => fakeOwnerAccount.switchAccount()}>switch</button>
+<button class="btn" onclick={() => fakeOwnerAccount.disableAccount()}>disable</button>
 <hr />
+<h3>ownerAccount</h3>
+{JSON.stringify($fakeOwnerAccount, (k, v) => (k === 'privateKey' ? !!v : v), 2)}
+<hr />
+<h3>privateAccount</h3>
+{JSON.stringify($privateAccount, (k, v) => (k === 'privateKey' ? !!v : v), 2)}
+<hr />
+<h3>serviceWorker</h3>
 {JSON.stringify($serviceWorker, (k, v) => (k === 'subscription' ? !!v : v), 2)}
 <hr />
+<h3>pushNotifications</h3>
 {JSON.stringify($pushNotifications, (k, v) => (k === 'subscription' ? !!v : v), 2)}
 <hr />
 

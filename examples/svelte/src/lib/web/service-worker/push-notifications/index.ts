@@ -30,7 +30,7 @@ export type PushNotificationsState =
 			error?: any;
 	  };
 
-type PrivateAccount = { address: string; privateKey: string } | undefined;
+type PrivateAccount = { signer: { address: string; privateKey: string } | undefined } | undefined;
 
 export function createPushNotificationStore(params: {
 	serverPublicKey: string;
@@ -44,7 +44,8 @@ export function createPushNotificationStore(params: {
 		registration: ServiceWorkerRegistration,
 		account: PrivateAccount
 	): Promise<PushNotificationsState> {
-		if (!account) {
+		const accountAddress = account?.signer?.address;
+		if (!accountAddress) {
 			return {
 				settled: false,
 				loading: false
@@ -52,7 +53,6 @@ export function createPushNotificationStore(params: {
 		}
 		const subscription = await registration.pushManager.getSubscription();
 		if (subscription) {
-			const accountAddress = account.address;
 			const registrationOnServerResponse = await fetch(
 				`${params.serverEndpoint}/registered/${accountAddress}/${domain}/${encodeURIComponent(subscription.endpoint)}`
 			);
@@ -145,15 +145,16 @@ export function createPushNotificationStore(params: {
 			return;
 		}
 		const applicationServerKey = urlB64ToUint8Array(params.serverPublicKey);
+		const accountAddress = _account?.signer?.address;
 		if (
-			_account &&
+			accountAddress &&
 			_serviceWorker &&
 			!_serviceWorker.loading &&
 			!_serviceWorker.notSupported &&
 			!_serviceWorker.registering &&
 			_serviceWorker.registration
 		) {
-			const accountBeingUsed = _account.address;
+			const accountBeingUsed = accountAddress;
 			setState({ settled: true, subscribing: true, subscription: undefined });
 			_serviceWorker.registration.pushManager
 				.subscribe({
@@ -163,11 +164,11 @@ export function createPushNotificationStore(params: {
 				.then(async function (subscription) {
 					// TODO one more state update to show registrating on server
 
-					if (_account?.address != accountBeingUsed) {
+					if (_account?.signer?.address != accountBeingUsed) {
 						return;
 					}
 
-					await _registerOnServer(_account.address, subscription);
+					await _registerOnServer(_account.signer.address, subscription);
 				})
 				.catch(function (error) {
 					if (Notification.permission === 'denied') {
@@ -201,7 +202,7 @@ export function createPushNotificationStore(params: {
 			});
 			if (response.ok) {
 				const json = await response.json();
-				if (_account?.address != address) {
+				if (_account?.signer?.address != address) {
 					// changed in between
 					return;
 				}
@@ -216,8 +217,9 @@ export function createPushNotificationStore(params: {
 	}
 
 	function registerOnServer() {
-		if (_state.settled && 'subscription' in _state && _state.subscription && _account?.address) {
-			_registerOnServer(_account.address, _state.subscription);
+		const accountAddress = _account?.signer?.address;
+		if (_state.settled && 'subscription' in _state && _state.subscription && accountAddress) {
+			_registerOnServer(accountAddress, _state.subscription);
 		} else {
 			throw new Error(`not ready`);
 		}
@@ -230,13 +232,17 @@ export function createPushNotificationStore(params: {
 	}
 
 	async function testPush(message: string) {
+		const accountAddress = _account?.signer?.address;
+		if (!accountAddress) {
+			throw new Error(`no account`);
+		}
 		const response = await fetch(`${params.serverEndpoint}/push`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
 			body: JSON.stringify({
-				address: _account?.address,
+				address: accountAddress,
 				domain,
 				message
 			})

@@ -28,7 +28,12 @@ export function createFakeOwnerAccount() {
 
 	const store = writable<FakeOwnerAccount>({ address: currentAccount.address });
 	function switchAccount(i?: number) {
-		const newIndex = i || ((currentAccount?.index || -1) + 1) % accounts.length;
+		const newIndex =
+			typeof i === 'undefined'
+				? (currentAccount ? currentAccount.index + 1 : 0) % accounts.length
+				: i;
+
+		console.log({ newIndex, oldIndex: currentAccount?.index, i });
 		currentAccount = {
 			...accounts[newIndex],
 			index: newIndex
