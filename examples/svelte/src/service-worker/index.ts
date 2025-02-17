@@ -210,6 +210,7 @@ async function getClientsStatus(): Promise<{
 	atLeastOneFocused: boolean;
 	atLeastOneVisibleAndFocused: boolean;
 }> {
+	// TODO compute last active so that if none are both "focused and visible", we know where to jump in
 	const windowClients = await sw.clients.matchAll({
 		type: 'window',
 		includeUncontrolled: true
