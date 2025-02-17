@@ -97,7 +97,6 @@ export function createPushNotificationStore(params: {
 		if (
 			_account &&
 			_serviceWorker &&
-			!_serviceWorker.loading &&
 			!_serviceWorker.notSupported &&
 			!_serviceWorker.registering &&
 			_serviceWorker.registration
@@ -149,7 +148,6 @@ export function createPushNotificationStore(params: {
 		if (
 			accountAddress &&
 			_serviceWorker &&
-			!_serviceWorker.loading &&
 			!_serviceWorker.notSupported &&
 			!_serviceWorker.registering &&
 			_serviceWorker.registration

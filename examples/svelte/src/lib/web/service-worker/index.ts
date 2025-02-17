@@ -29,31 +29,23 @@ const IDLE_DELAY_MS = 3 * 60 * 1000;
 const CHECK_DELAY_MS = 30 * 60 * 1000;
 
 export type ServiceWorkerState =
+	| undefined
 	| {
-			loading: true;
-	  }
-	| {
-			loading: false;
 			notSupported: true;
 	  }
 	| {
-			loading: false;
 			notSupported: false;
 			registering: true;
 	  }
 	| {
 			registration?: ServiceWorkerRegistration;
 			updateAvailable: boolean;
-			// registering: boolean;
-			loading: false;
 			notSupported: false;
 			registering: false;
 	  };
 
 export function createServiceWorkerStore() {
-	const store = writable<ServiceWorkerState>({
-		loading: true
-	});
+	const store = writable<ServiceWorkerState>(undefined);
 
 	function pingServideWorker(state: 'installing' | 'waiting' | 'active' = 'active') {
 		sendMessage(
@@ -69,7 +61,7 @@ export function createServiceWorkerStore() {
 		state: 'installing' | 'waiting' | 'active' = 'active'
 	) {
 		const $serviceWorker = get(store);
-		if ($serviceWorker.loading) {
+		if (!$serviceWorker) {
 			throw new Error(`not loaded`);
 		}
 		if ($serviceWorker.notSupported) {
@@ -91,7 +83,7 @@ export function createServiceWorkerStore() {
 	function skipWaiting() {
 		logger.log(`accepting update...`);
 		const $serviceWorker = get(store);
-		if ($serviceWorker.loading) {
+		if (!$serviceWorker) {
 			throw new Error(`not loaded`);
 		}
 		if ($serviceWorker.notSupported) {
@@ -118,7 +110,6 @@ export function createServiceWorkerStore() {
 			if (!dev) {
 				logger.log(`update store`);
 				store.set({
-					loading: false,
 					notSupported: false,
 					updateAvailable: false,
 					registration: $serviceWorker.registration,
@@ -130,7 +121,7 @@ export function createServiceWorkerStore() {
 
 	function skip() {
 		const $serviceWorker = get(store);
-		if ($serviceWorker.loading) {
+		if (!$serviceWorker) {
 			throw new Error(`not loaded`);
 		}
 		if ($serviceWorker.notSupported) {
@@ -140,7 +131,6 @@ export function createServiceWorkerStore() {
 			throw new Error(`is registering...`);
 		}
 		store.set({
-			loading: false,
 			notSupported: false,
 			updateAvailable: false,
 			registration: $serviceWorker.registration,
@@ -150,7 +140,7 @@ export function createServiceWorkerStore() {
 
 	function register() {
 		if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-			store.set({ loading: false, notSupported: false, registering: true });
+			store.set({ notSupported: false, registering: true });
 
 			// ------------------------------------------------------------------------------------------------
 			// FORCE RELOAD ON CONTROLLER CHANGE
@@ -177,7 +167,6 @@ export function createServiceWorkerStore() {
 					} catch (e) {}
 
 					store.set({
-						loading: false,
 						notSupported: false,
 						updateAvailable: false,
 						registration: registration,
@@ -188,7 +177,6 @@ export function createServiceWorkerStore() {
 					updateLoggingForWorker(registration.active);
 					listenForWaitingServiceWorker(registration, () => {
 						store.set({
-							loading: false,
 							notSupported: false,
 							updateAvailable: true,
 							registration: registration,
@@ -201,7 +189,7 @@ export function createServiceWorkerStore() {
 				});
 		} else {
 			if (typeof window !== 'undefined') {
-				store.set({ loading: false, notSupported: true });
+				store.set({ notSupported: true });
 			}
 		}
 	}
@@ -211,7 +199,7 @@ export function createServiceWorkerStore() {
 		set: store.set, // TODO remove and move handler logic in here
 		get registration(): ServiceWorkerRegistration | undefined {
 			const $serviceWorker = get(store);
-			if ('registration' in $serviceWorker) {
+			if ($serviceWorker && 'registration' in $serviceWorker) {
 				return $serviceWorker.registration;
 			} else {
 				return undefined;
@@ -219,7 +207,7 @@ export function createServiceWorkerStore() {
 		},
 		get updateAvailable(): boolean {
 			const $serviceWorker = get(store);
-			if ('updateAvailable' in $serviceWorker) {
+			if ($serviceWorker && 'updateAvailable' in $serviceWorker) {
 				return $serviceWorker.updateAvailable;
 			} else {
 				return false;
