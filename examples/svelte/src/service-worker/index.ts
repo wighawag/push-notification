@@ -250,7 +250,7 @@ type JSONNotification = {
 	options: {
 		badge?: string;
 		body: string;
-		// data?: any; // TODO what is for
+		data?: { url?: string };
 		dir?: NotificationDirection;
 		icon?: string;
 		lang?: string;
@@ -308,15 +308,21 @@ sw.addEventListener('push', function (event: PushEvent) {
 	event.waitUntil(handlePush(data));
 });
 
-async function handleNotificationClick() {
+async function handleNotificationClick(notification: Notification) {
 	const windowClients = await sw.clients.matchAll({
 		type: 'window',
 		includeUncontrolled: true
 	});
 
-	// TODO add notification specifics to deep link
-	// const url = '/#sadsadsa=dsads';
-	const url = undefined;
+	const swPath = location.pathname;
+	const swFolder = swPath.substring(0, swPath.lastIndexOf('/') + 1);
+
+	let url = notification.data?.url;
+	if (url) {
+		if (!url.startsWith('/') && url.indexOf(':/') == -1) {
+			url = swFolder + url;
+		}
+	}
 
 	for (const client of windowClients) {
 		log(`${'focus' in client ? 'focus-available: ' : ''}: ${client.url}`);
@@ -333,5 +339,6 @@ async function handleNotificationClick() {
 
 sw.addEventListener('notificationclick', function (event: NotificationEvent) {
 	event.notification.close();
-	event.waitUntil(handleNotificationClick());
+
+	event.waitUntil(handleNotificationClick(event.notification));
 });
