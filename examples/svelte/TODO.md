@@ -19,3 +19,5 @@
 - [ ] system to activate pending action based on top of current remote state
 
 - [ ] layer system: remote-state, pending-state, private-derived-state, external-derived-state
+
+- [ ] global error store ? => linking to store: {aknowledgeError: () => void}

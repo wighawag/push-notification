@@ -11,21 +11,18 @@ export function createSync<T>(params: { syncURI: string; dbName: string }) {
 	const syncURI = params.syncURI;
 	let _lastId = 1;
 
-	async function fetchRemoteData(
-		signer: Signer
-	): Promise<{ data: T; counter: bigint } | undefined> {
+	async function fetchRemoteData(signer: Signer): Promise<{ data: T; counter: bigint }> {
 		let response: Response;
 		try {
 			response = await _syncRequest('wallet_getString', [signer.address, dbName]);
-		} catch (e) {
-			console.error(e);
-			return undefined;
+		} catch (err) {
+			console.error(err);
+			throw new Error("couldn't fetch remote data", { cause: err });
 		}
 
 		const json = await response.json();
 		if (json.error) {
-			console.error(json.error);
-			return undefined;
+			throw new Error('error fetching remote data', { cause: json.error });
 		}
 		let data: T;
 		if (json.result.data && json.result.data !== '') {
@@ -34,7 +31,7 @@ export function createSync<T>(params: { syncURI: string; dbName: string }) {
 				data = JSON.parse(decryptedData);
 			} catch (err: any) {
 				console.error(err);
-				return undefined;
+				throw new Error("couldn't fetch remote data", { cause: err });
 			}
 		} else {
 			data = {} as T;
@@ -53,7 +50,6 @@ export function createSync<T>(params: { syncURI: string; dbName: string }) {
 		});
 
 		let json;
-		let error;
 		try {
 			const response = await _syncRequest('wallet_putString', [
 				signer.address,
@@ -64,20 +60,11 @@ export function createSync<T>(params: { syncURI: string; dbName: string }) {
 			]);
 			json = await response.json();
 			if (json.error) {
-				throw new Error(json.error);
+				throw new Error('error submitting to remote data', { cause: json.error });
 			}
-		} catch (e) {
-			error = e;
-		}
-		if (error || json.error) {
-			console.error(error || json.error);
-			return; // TODO retry ?
-		}
-		if (!json.result || !json.result.success) {
-			console.error('sync no success', json);
-			return; // TODO retry ?
-		} else {
-			// logger.info('synced!');
+		} catch (err) {
+			console.error(err);
+			throw new Error("couldn't submit to remote", { cause: err });
 		}
 	}
 
