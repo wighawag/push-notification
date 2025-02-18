@@ -54,7 +54,12 @@
 								<button
 									type="button"
 									class="rounded-md bg-white text-sm font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-									onclick={() => notifications.remove(notification.id)}>ok</button
+									onclick={() => notifications.onClick(notification.id)}>ok</button
+								>
+								<button
+									type="button"
+									class="rounded-md bg-white text-sm font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+									onclick={() => notifications.remove(notification.id)}>dismiss</button
 								>
 							</div>
 						</div>
