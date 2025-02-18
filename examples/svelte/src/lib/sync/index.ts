@@ -16,7 +16,7 @@ export function createSync<T>(params: { syncURI: string; dbName: string }) {
 		try {
 			response = await _syncRequest('wallet_getString', [signer.address, dbName]);
 		} catch (err) {
-			console.error(err);
+			// console.error(err);
 			throw new Error("couldn't fetch remote data", { cause: err });
 		}
 

@@ -101,7 +101,10 @@ async function fetchAndUpdateCache(request: Request, cache?: Response) {
 		if (cache) {
 			return cache;
 		} else {
-			throw err_1;
+			return new Response(`Could Not fetch ${request.url}`, {
+				status: 503,
+				headers: { 'Content-Type': 'text/plain' }
+			});
 		}
 	}
 }

@@ -16,11 +16,11 @@ export const privateAccount = createPrivateAccount({
 export const storage = createEncryptedStorage({
 	defaultData: { hello: 'world' },
 	dbName: 'push-notifications-example',
-	syncURI: 'http://localhost:34001',
+	sync: { uri: 'http://localhost:34001' },
 	account: privateAccount,
 	// TODO
 	merge: (a, b) => ({
-		newData: a && b ? { ...a, ...b } : a ? a : b ? b : undefined,
+		newData: a && b ? { ...a, ...b } : { ...a },
 		newDataOnLocal: true,
 		newDataOnRemote: true
 	}),
