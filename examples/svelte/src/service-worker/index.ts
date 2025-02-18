@@ -315,15 +315,20 @@ async function handleNotificationClick() {
 	});
 
 	// TODO add notification specifics to deep link
+	// const url = '/#sadsadsa=dsads';
+	const url = undefined;
 
 	for (const client of windowClients) {
 		log(`${'focus' in client ? 'focus-available: ' : ''}: ${client.url}`);
 		// TODO url checks: client.url === '/' &&  ?
 		if ('focus' in client) {
+			if (url && 'navigate' in client) {
+				return client.focus().then(() => client.navigate(url));
+			}
 			return client.focus();
 		}
 	}
-	if (sw.clients.openWindow) return sw.clients.openWindow('/');
+	if (sw.clients.openWindow) return sw.clients.openWindow(url || '/');
 }
 
 sw.addEventListener('notificationclick', function (event: NotificationEvent) {
