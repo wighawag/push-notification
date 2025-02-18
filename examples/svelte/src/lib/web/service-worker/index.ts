@@ -4,6 +4,7 @@ import type { Logger } from 'named-logs';
 import { logs } from 'named-logs';
 import { base } from '$app/paths';
 import { handleAutomaticUpdate, listenForWaitingServiceWorker } from './utils';
+import { notifications } from '$lib/notifications';
 
 const logger = logs('service-worker') as Logger & {
 	level: number;
@@ -154,6 +155,17 @@ export function createServiceWorker() {
 				window.location.reload();
 			});
 			// ------------------------------------------------------------------------------------------------
+
+			//listen to messages
+			navigator.serviceWorker.onmessage = (event) => {
+				if (event.data && event.data.type === 'notification') {
+					console.log(event);
+					notifications.add({
+						type: 'push-notification',
+						data: event.data.notification
+					});
+				}
+			};
 
 			const swLocation = `${base}/service-worker.js`;
 			//{scope: `${base}/`}

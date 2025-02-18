@@ -209,9 +209,9 @@ sw.addEventListener('message', async function (event) {
 // ------------------------------------------------------------------------------------------------
 
 async function getClientsStatus(): Promise<{
-	atLeastOneVisible: boolean;
-	atLeastOneFocused: boolean;
-	atLeastOneVisibleAndFocused: boolean;
+	atLeastOneVisible: WindowClient | undefined;
+	atLeastOneFocused: WindowClient | undefined;
+	atLeastOneVisibleAndFocused: WindowClient | undefined;
 }> {
 	// TODO compute last active so that if none are both "focused and visible", we know where to jump in
 	const windowClients = await sw.clients.matchAll({
@@ -219,20 +219,22 @@ async function getClientsStatus(): Promise<{
 		includeUncontrolled: true
 	});
 
-	let atLeastOneVisible = false;
-	let atLeastOneFocused = false;
-	let atLeastOneVisibleAndFocused = false;
+	let atLeastOneVisible: WindowClient | undefined;
+	let atLeastOneFocused: WindowClient | undefined;
+	let atLeastOneVisibleAndFocused: WindowClient | undefined;
 	for (var i = 0; i < windowClients.length; i++) {
-		const visible = windowClients[i].visibilityState === 'visible';
-		const hasFocus = windowClients[i].focused;
-		if (visible) {
-			atLeastOneVisible = true;
+		const windowClient = windowClients[i];
+		const visible = windowClient.visibilityState === 'visible';
+		const hasFocus = windowClient.focused;
+		if (visible && !atLeastOneVisible) {
+			atLeastOneVisible = windowClient;
 		}
-		if (hasFocus) {
-			atLeastOneFocused = true;
+		if (hasFocus && !atLeastOneFocused) {
+			atLeastOneFocused = windowClient;
 		}
 		if (hasFocus && visible) {
-			atLeastOneVisibleAndFocused = true;
+			atLeastOneVisibleAndFocused = windowClient;
+			break;
 		}
 	}
 
@@ -243,20 +245,62 @@ async function getClientsStatus(): Promise<{
 	};
 }
 
+type JSONNotification = {
+	title: string;
+	options: {
+		badge?: string;
+		body: string;
+		// data?: any; // TODO what is for
+		dir?: NotificationDirection;
+		icon?: string;
+		lang?: string;
+		requireInteraction?: boolean;
+		silent?: boolean | null;
+		tag?: string;
+	};
+};
+
 async function handlePush(data?: string) {
 	const appActive = await getClientsStatus();
 
-	// TODO define a json format
-	const title = 'Example';
-	const options = {
-		body: data,
-		icon: '/favicon.png',
-		badge: '/favicon.png'
+	const defaultNotification: JSONNotification = {
+		title: 'Notification',
+		options: {
+			body: 'You have a new notification',
+			icon: '/favicon.png', // TODO template it ?
+			badge: '/favicon.png' // TODO template it ?
+		}
 	};
+	let dataAsJson: JSONNotification | undefined;
+
+	if (data) {
+		try {
+			// dataAsJson = JSON.parse(data);
+			const json = JSON.parse(data);
+			dataAsJson = {
+				...defaultNotification,
+				...json,
+				options: { ...defaultNotification.options, ...json.options }
+			};
+		} catch {
+			dataAsJson = {
+				...defaultNotification,
+				options: { ...defaultNotification.options, body: data }
+			};
+		}
+	}
+
+	if (!dataAsJson) {
+		dataAsJson = defaultNotification;
+	}
+
 	if (appActive.atLeastOneVisibleAndFocused) {
-		// TODO show notification in app
+		appActive.atLeastOneVisibleAndFocused.postMessage({
+			type: 'notification',
+			notification: dataAsJson
+		});
 	} else {
-		await sw.registration.showNotification(title, options);
+		await sw.registration.showNotification(dataAsJson.title, dataAsJson.options);
 	}
 }
 sw.addEventListener('push', function (event: PushEvent) {
