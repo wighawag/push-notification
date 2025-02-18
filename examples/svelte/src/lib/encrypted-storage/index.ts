@@ -14,14 +14,14 @@ export type EncryptedStorage<Data> =
 	| {
 			loading: true;
 			data: undefined;
-			// remoteFetchedAtLeastOnce: false;
+			remoteFetchedAtLeastOnce: false;
 	  }
 	| {
 			loading: false;
 			data: Data;
 			counter: number;
 			syncError?: { message: string; cause: any };
-			// remoteFetchedAtLeastOnce: boolean;
+			remoteFetchedAtLeastOnce: boolean;
 	  };
 
 export type StorageProvider = {
@@ -31,7 +31,7 @@ export type StorageProvider = {
 
 export type MergeFunction<T> = (
 	localData: Readonly<T>,
-	remoteData?: Readonly<T>
+	remoteData: Readonly<T>
 ) => { newData: T; newDataOnLocal: boolean; newDataOnRemote: boolean };
 
 export type CleanFunction<T> = (data: Readonly<T>) => T;
@@ -42,6 +42,9 @@ export function createEncryptedStorage<Data>(params: {
 	defaultData: Data;
 	account: Readable<PrivateAccount>;
 	dbName: string;
+	debug?: {
+		delay?: number;
+	};
 	sync?: {
 		uri: string;
 		syncIntervalInSeconds?: number;
@@ -82,7 +85,7 @@ export function createEncryptedStorage<Data>(params: {
 		}
 	}
 
-	async function firstLoad(): Promise<{
+	async function firstLoad(signer: Signer): Promise<{
 		data: Data;
 		newDataToSaveOnLocal: boolean;
 		newDataToSaveOnRemote: boolean;
@@ -92,12 +95,12 @@ export function createEncryptedStorage<Data>(params: {
 			data: dataAfterRemoteSync,
 			newDataOnRemote,
 			remoteCounter
-		} = await _syncWithRemote(_defaultData);
+		} = await _syncWithRemote(signer, _defaultData);
 		const {
 			data: dataAfterLocalSync,
 			newDataOnLocal: newDataToSaveOnLocal,
 			newDataOnRemote: newDataToSaveOnRemote
-		} = await _syncWithLocalStorage(dataAfterRemoteSync);
+		} = await _syncWithLocalStorage(signer, dataAfterRemoteSync);
 
 		const cleaned = params.clean(dataAfterLocalSync);
 
@@ -111,13 +114,17 @@ export function createEncryptedStorage<Data>(params: {
 		if ($account && $account.signer) {
 			if ($account.signer.address != _account?.signer?.address) {
 				_account = $account;
-				setState({ loading: true, data: undefined });
-				const accountAddress = _account.signer.address;
-
+				setState({ loading: true, data: undefined, remoteFetchedAtLeastOnce: false });
+				const signer = structuredClone(_account.signer);
 				const { data, newDataToSaveOnLocal, newDataToSaveOnRemote, remoteCounter } =
-					await firstLoad();
-				if (accountAddress == _account.signer.address) {
-					setState({ loading: false, data, counter: 0 });
+					await firstLoad(signer);
+				if (signer.address == _account.signer.address) {
+					setState({
+						loading: false,
+						data,
+						counter: 0,
+						remoteFetchedAtLeastOnce: typeof remoteCounter !== 'undefined'
+					});
 					if (newDataToSaveOnRemote && remoteCounter) {
 						saveToRemoteOnceIdle(data, remoteCounter);
 					}
@@ -136,39 +143,31 @@ export function createEncryptedStorage<Data>(params: {
 		}
 	}
 
-	async function _syncWithLocalStorage(localData: Data): Promise<{
+	async function _syncWithLocalStorage(
+		signer: Signer,
+		localData: Data
+	): Promise<{
 		data: Data;
 		newDataOnRemote: boolean;
 		newDataOnLocal: boolean;
 	}> {
-		const signer = _account?.signer;
-		if (!signer) {
-			throw new Error(`no signer`);
-		}
-		const accountAddress = signer.address;
-		const privateKey = signer.privateKey;
-		const key = computeStorageKey(accountAddress);
+		const key = computeStorageKey(signer.address);
 
 		const fromStorage = await storageProvider.load(key);
 
-		let local: Data;
+		let dataFromStorage: Data | undefined;
 		if (fromStorage) {
 			try {
-				const decrypted = decrypt(privateKey, fromStorage);
-				local = JSON.parse(decrypted) as Data;
+				const decrypted = decrypt(signer.privateKey, fromStorage);
+				dataFromStorage = JSON.parse(decrypted) as Data;
 			} catch {
-				local = structuredClone(_defaultData);
+				dataFromStorage = undefined;
 			}
-		} else {
-			local = structuredClone(_defaultData);
 		}
 
-		if (accountAddress != _account?.signer?.address) {
-			throw new Error(`account changed`);
-		}
-		const merged = params.merge(localData, local);
+		if (dataFromStorage) {
+			const merged = params.merge(localData, dataFromStorage);
 
-		if (merged.newData) {
 			const cleaned = params.clean(merged.newData);
 
 			return {
@@ -176,34 +175,31 @@ export function createEncryptedStorage<Data>(params: {
 				newDataOnRemote: merged.newDataOnRemote,
 				newDataOnLocal: merged.newDataOnLocal
 			};
+		} else {
+			return { data: localData, newDataOnRemote: false, newDataOnLocal: false };
 		}
-		return { data: _defaultData, newDataOnRemote: false, newDataOnLocal: false };
 	}
 
-	async function _syncWithRemote(localData: Data): Promise<{
+	async function _syncWithRemote(
+		signer: Signer,
+		localData: Data
+	): Promise<{
 		data: Data;
 		newDataOnRemote: boolean;
 		newDataOnLocal: boolean;
 		remoteCounter: bigint | undefined;
 	}> {
-		const signer = _account?.signer;
-		if (!signer) {
-			throw new Error(`no signer, cann sync with remote`);
+		if (params?.debug?.delay) {
+			await wait(params?.debug?.delay);
 		}
-		const accountAddress = signer.address;
-		const privateKey = signer.privateKey;
-
 		let remoteResult: { data: Data; counter: bigint } | undefined;
 		if (sync) {
 			try {
-				remoteResult = await sync.fetchRemoteData({ address: accountAddress, privateKey });
+				remoteResult = await sync.fetchRemoteData(signer);
 			} catch (err) {
 				// console.error(err);
 				// TODO
 			}
-		}
-		if (accountAddress != _account?.signer?.address) {
-			throw new Error(`account changed`);
 		}
 
 		if (remoteResult && remoteResult.data) {
@@ -252,6 +248,10 @@ export function createEncryptedStorage<Data>(params: {
 
 		const key = computeStorageKey(accountAddress);
 		const toStore = encrypt(privateKey, JSON.stringify(data));
+
+		if (params?.debug?.delay) {
+			await wait(params?.debug?.delay);
+		}
 		try {
 			await localStorageProvider.save(key, toStore);
 		} catch (err) {
@@ -284,6 +284,9 @@ export function createEncryptedStorage<Data>(params: {
 		const privateKey = account.signer.privateKey;
 		const dataToStore = structuredClone(data);
 
+		if (params?.debug?.delay) {
+			await wait(params?.debug?.delay);
+		}
 		await sync.postToRemote({ address: accountAddress, privateKey }, dataToStore, counter);
 	}
 
@@ -323,50 +326,47 @@ export function createEncryptedStorage<Data>(params: {
 		if (_state?.loading) {
 			return;
 		}
-		const accountAddress = _account.signer.address;
+		const signer = structuredClone(_account.signer);
 		const counter = _state.counter;
 
 		const {
 			data: dataAfterRemoteSync,
 			newDataOnRemote,
 			remoteCounter
-		} = await _syncWithRemote(_state.data);
+		} = await _syncWithRemote(signer, _state.data);
 		const {
 			data: dataAfterLocalSync,
 			newDataOnLocal: newDataToSaveOnLocal,
 			newDataOnRemote: newDataToSaveOnRemote
-		} = await _syncWithLocalStorage(dataAfterRemoteSync);
+		} = await _syncWithLocalStorage(signer, dataAfterRemoteSync);
 
 		if (_state.counter != counter) {
 			// we skip // TODO trigger it again, use setTimeout instead of setInterval
 			return;
 		}
 
-		if (!_account?.signer) {
-			return;
-		}
-		if (!_state) {
-			return;
-		}
-		if (_state?.loading) {
+		if (signer.address != _account.signer?.address) {
+			// skip as we are dealing with an outdated response, pertaining to an other account
 			return;
 		}
 
 		const cleaned = params.clean(dataAfterLocalSync);
 
-		if (accountAddress == _account.signer.address) {
-			if (newDataOnRemote || newDataToSaveOnRemote) {
-				setState({ loading: false, data: cleaned, counter: 0 });
-			}
+		if (newDataOnRemote || newDataToSaveOnRemote) {
+			setState({
+				loading: false,
+				data: cleaned,
+				counter: _state.counter,
+				remoteFetchedAtLeastOnce:
+					_state.remoteFetchedAtLeastOnce || typeof remoteCounter !== 'undefined'
+			});
+		}
 
-			if (newDataToSaveOnRemote && remoteCounter) {
-				saveToRemoteOnceIdle(cleaned, remoteCounter);
-			}
-			if (newDataToSaveOnLocal) {
-				saveToStorageOnceIdle(cleaned);
-			}
-		} else {
-			// skip as we are dealing with an outdated response, pertaining to an other account
+		if (newDataToSaveOnRemote && remoteCounter) {
+			saveToRemoteOnceIdle(cleaned, remoteCounter);
+		}
+		if (newDataToSaveOnLocal) {
+			saveToStorageOnceIdle(cleaned);
 		}
 	}
 	let pendingLocalSync: NodeJS.Timeout | undefined;
@@ -381,41 +381,36 @@ export function createEncryptedStorage<Data>(params: {
 			return;
 		}
 
-		const accountAddress = _account.signer.address;
+		const signer = structuredClone(_account.signer);
 		const counter = _state.counter;
 
 		const {
 			data: dataAfterLocalSync,
 			newDataOnLocal: newDataToSaveOnLocal,
 			newDataOnRemote: newDataToSaveOnMemory
-		} = await _syncWithLocalStorage(_state.data);
+		} = await _syncWithLocalStorage(signer, _state.data);
 
 		if (_state.counter != counter) {
 			// we skip // TODO trigger it again, use setTimeout instead of setInterval
 			return;
 		}
 
-		if (!_account?.signer) {
+		if (signer.address != _account.signer?.address) {
+			// skip as we are dealing with an outdated response, pertaining to an other account
 			return;
 		}
-		if (!_state) {
-			return;
-		}
-		if (_state?.loading) {
-			return;
-		}
-
 		const cleaned = params.clean(dataAfterLocalSync);
 
-		if (accountAddress == _account.signer.address) {
-			if (newDataToSaveOnMemory) {
-				setState({ loading: false, data: cleaned, counter: 0 });
-			}
-			if (newDataToSaveOnLocal) {
-				saveToStorageOnceIdle(cleaned);
-			}
-		} else {
-			// skip as we are dealing with an outdated response, pertaining to an other account
+		if (newDataToSaveOnMemory) {
+			setState({
+				loading: false,
+				data: cleaned,
+				counter: _state.counter,
+				remoteFetchedAtLeastOnce: _state.remoteFetchedAtLeastOnce
+			});
+		}
+		if (newDataToSaveOnLocal) {
+			saveToStorageOnceIdle(cleaned);
 		}
 	}
 
