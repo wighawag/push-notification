@@ -5,6 +5,7 @@ import { logs } from 'named-logs';
 import { base } from '$app/paths';
 import { handleAutomaticUpdate, listenForWaitingServiceWorker } from './utils';
 import { notifications } from '$lib/notifications';
+import { clean } from '@noble/ciphers/utils';
 
 const logger = logs('service-worker') as Logger & {
 	level: number;
@@ -37,6 +38,13 @@ export type ServiceWorkerState =
 	| {
 			notSupported: false;
 			registering: true;
+	  }
+	| {
+			notSupported: false;
+			registering: false;
+			error: { message: string; cause: any };
+			registration: undefined;
+			updateAvailable: false;
 	  }
 	| {
 			registration?: ServiceWorkerRegistration;
@@ -197,6 +205,17 @@ export function createServiceWorker() {
 					});
 				})
 				.catch((e) => {
+					console.error(e);
+					store.set({
+						registering: false,
+						notSupported: false,
+						updateAvailable: false,
+						registration: undefined,
+						error: {
+							message: `failed to register service-worker`,
+							cause: e.message || e
+						}
+					});
 					logger.error('Failed to register service worker', e);
 				});
 		} else {
