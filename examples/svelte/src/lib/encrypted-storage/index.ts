@@ -34,7 +34,7 @@ export type MergeFunction<T> = (
 	remoteData: Readonly<T>
 ) => { newData: T; newDataOnLocal: boolean; newDataOnRemote: boolean };
 
-export type CleanFunction<T> = (data: Readonly<T>) => T;
+export type CleanFunction<T> = (data: Readonly<T>) => Promise<T>;
 
 const localStorageProvider = createLocalStorageProvider();
 
@@ -102,7 +102,7 @@ export function createEncryptedStorage<Data>(params: {
 			newDataOnRemote: newDataToSaveOnRemote
 		} = await _syncWithLocalStorage(signer, dataAfterRemoteSync);
 
-		const cleaned = params.clean(dataAfterLocalSync);
+		const cleaned = await params.clean(dataAfterLocalSync);
 
 		return { data: cleaned, newDataToSaveOnLocal, newDataToSaveOnRemote, remoteCounter };
 	}
@@ -168,7 +168,7 @@ export function createEncryptedStorage<Data>(params: {
 		if (dataFromStorage) {
 			const merged = params.merge(localData, dataFromStorage);
 
-			const cleaned = params.clean(merged.newData);
+			const cleaned = await params.clean(merged.newData);
 
 			return {
 				data: cleaned,
@@ -206,7 +206,7 @@ export function createEncryptedStorage<Data>(params: {
 			const merged = params.merge(localData || _defaultData, remoteResult.data);
 
 			if (merged.newData) {
-				const cleaned = params.clean(merged.newData);
+				const cleaned = await params.clean(merged.newData);
 
 				return {
 					data: cleaned,
@@ -340,6 +340,8 @@ export function createEncryptedStorage<Data>(params: {
 			newDataOnRemote: newDataToSaveOnRemote
 		} = await _syncWithLocalStorage(signer, dataAfterRemoteSync);
 
+		const cleaned = await params.clean(dataAfterLocalSync);
+
 		if (_state.counter != counter) {
 			// we skip // TODO trigger it again, use setTimeout instead of setInterval
 			return;
@@ -350,13 +352,11 @@ export function createEncryptedStorage<Data>(params: {
 			return;
 		}
 
-		const cleaned = params.clean(dataAfterLocalSync);
-
 		if (newDataOnRemote || newDataToSaveOnRemote) {
 			setState({
 				loading: false,
 				data: cleaned,
-				counter: _state.counter,
+				counter: _state.counter + 1,
 				remoteFetchedAtLeastOnce:
 					_state.remoteFetchedAtLeastOnce || typeof remoteCounter !== 'undefined'
 			});
@@ -390,6 +390,8 @@ export function createEncryptedStorage<Data>(params: {
 			newDataOnRemote: newDataToSaveOnMemory
 		} = await _syncWithLocalStorage(signer, _state.data);
 
+		const cleaned = await params.clean(dataAfterLocalSync);
+
 		if (_state.counter != counter) {
 			// we skip // TODO trigger it again, use setTimeout instead of setInterval
 			return;
@@ -399,13 +401,12 @@ export function createEncryptedStorage<Data>(params: {
 			// skip as we are dealing with an outdated response, pertaining to an other account
 			return;
 		}
-		const cleaned = params.clean(dataAfterLocalSync);
 
 		if (newDataToSaveOnMemory) {
 			setState({
 				loading: false,
 				data: cleaned,
-				counter: _state.counter,
+				counter: _state.counter + 1,
 				remoteFetchedAtLeastOnce: _state.remoteFetchedAtLeastOnce
 			});
 		}

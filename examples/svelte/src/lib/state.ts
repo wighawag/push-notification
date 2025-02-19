@@ -25,7 +25,7 @@ export const storage = createEncryptedStorage({
 		newDataOnRemote: true
 	}),
 	// TODO can remove based on timestamp
-	clean: (d) => d
+	clean: async (d) => d
 });
 
 export const serviceWorker = createServiceWorker();
