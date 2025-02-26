@@ -1,5 +1,5 @@
 {
-  "name": "push-notification-server-cf-worker",
+  "name": "push-notification-cf-worker",
   "version": "0.0.0",
   "publishConfig": {
     "access": "public"
@@ -12,26 +12,26 @@
   "dependencies": {
     "named-logs": "^0.3.2",
     "named-logs-context": "^0.1.1",
-    "push-notification-server-app": "workspace:*",
+    "push-notification-server": "workspace:*",
     "remote-sql-d1": "^0.0.6",
-    "viem": "^2.21.55",
+    "viem": "^2.23.5",
     "workers-logger": "0.2.1"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.5.36",
-    "@cloudflare/workers-types": "^4.20241205.0",
-    "@types/node": "^22.10.2",
+    "@cloudflare/vitest-pool-workers": "^0.7.3",
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "@types/node": "^22.13.5",
     "ldenv": "^0.3.12",
     "set-defaults": "^0.0.5",
     "typescript": "^5.6.3",
-    "vitest": "^2.1.8",
-    "wrangler": "^3.95.0"
+    "vitest": "^3.0.7",
+    "wrangler": "^3.110.0"
   },
   "scripts": {
     "prepare": "set-defaults .",
     "deploy:production": "wrangler -e production deploy --minify",
     "dev": "pnpm init-db && wrangler dev -e production --port 34005",
-    "init-db": "ldenv wrangler -e production d1 execute push-notification-db --file=node_modules/push-notification-server-app/src/schema/sql/db.sql ~~",
+    "init-db": "ldenv wrangler -e production d1 execute push-notification-db --file=node_modules/push-notification-server/src/schema/sql/db.sql ~~",
     "test": "vitest"
   }
 }

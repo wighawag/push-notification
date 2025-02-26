@@ -1,13 +1,13 @@
 {
-  "name": "push-notification-server-monorepo",
+  "name": "push-notification-monorepo",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "devDependencies": {
-    "@changesets/cli": "^2.27.11",
+    "@changesets/cli": "^2.28.1",
     "ldenv": "^0.3.12",
     "set-defaults": "^0.0.5",
-    "syncpack": "^13.0.0",
+    "syncpack": "^13.0.2",
     "zellij-launcher": "^0.0.1"
   },
   "scripts": {
@@ -19,13 +19,13 @@
     "format": "prettier --write . && pnpm -r format",
     "format:check": "prettier --check . && pnpm -r format:check",
     "---------------------- DEV ----------------------": "",
-    "cf-worker:dev": "pnpm --filter push-notification-server-cf-worker dev",
-    "server:dev": "pnpm --filter push-notification-server-app dev",
+    "cf-worker:dev": "pnpm --filter push-notification-cf-worker dev",
+    "server:dev": "pnpm --filter push-notification-server dev",
     "subscription-client:dev": "pnpm --filter push-notification-subscription-client dev",
-    "example:svelte:dev":  "pnpm --filter push-notification-example-svelte dev",
+    "example:svelte:dev": "pnpm --filter push-notification-example-svelte dev",
     "---------------------- DEPLOY ----------------------": "",
     "build": "ldenv pnpm run -r build",
-    "deploy:cf": "pnpm run --filter push-notification-server-server-cf-worker deploy",
+    "deploy:cf": "pnpm run --filter push-notification-cf-worker deploy",
     "---------------------- RUN FULL LOCAL SETUP ----------------------": "",
     "stop": "zellij kill-session $npm_package_name",
     "start": "zellij-launcher --layout zellij.kdl a $npm_package_name || zellij --layout zellij.kdl -s $npm_package_name"

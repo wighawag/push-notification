@@ -6,7 +6,7 @@ import {track, enable as enableWorkersLogger} from 'workers-logger';
 import {ExecutionContext} from '@cloudflare/workers-types/experimental';
 import {logflareReport} from './utils/logflare.js';
 import {consoleReporter} from './utils/basicReporters.js';
-import {createServer} from 'push-notification-server-app';
+import {createServer} from 'push-notification-server';
 
 enableWorkersLogger('*');
 const logger = logs('worker');

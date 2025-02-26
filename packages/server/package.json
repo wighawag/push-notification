@@ -1,7 +1,7 @@
 {
-  "name": "push-notification-server-app",
+  "name": "push-notification-server",
   "version": "0.0.0",
-  "description": "push notification server app",
+  "description": "push notification server",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -23,7 +23,7 @@
     "@block65/webcrypto-web-push": "^1.0.2",
     "@hono/swagger-ui": "^0.5.0",
     "@hono/typia-validator": "^0.1.0",
-    "hono": "^4.6.13",
+    "hono": "^4.7.2",
     "named-logs": "^0.3.2",
     "remote-sql": "^0.0.6",
     "webpush-webcrypto": "^1.0.3"
@@ -33,10 +33,10 @@
     "as-soon": "^0.0.11",
     "hono-typia-openapi": "^0.2.0",
     "ldenv": "^0.3.12",
-    "prettier": "^3.4.2",
+    "prettier": "^3.5.2",
     "ts-patch": "^3.3.0",
     "typescript": "^5.6.3",
-    "typia": "^7.4.1"
+    "typia": "^7.6.4"
   },
   "scripts": {
     "prepare": "ts-patch install && typia patch",

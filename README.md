@@ -1,5 +1,5 @@
 <h1 align="center">
-  push-notification-server
+  push-notification
 </h1>
 
 

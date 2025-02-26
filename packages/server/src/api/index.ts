@@ -8,7 +8,7 @@ import {logs} from 'named-logs';
 import {sendNotification} from '../web-push/via-webcrypto-web-push.js';
 import {Urgency} from '../web-push/types.js';
 
-const logger = logs('push-notification-server-app-api');
+const logger = logs('push-notification-server-api');
 
 export type SubscriptionRegistration = {
 	address: string;
