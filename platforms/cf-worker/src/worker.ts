@@ -6,7 +6,7 @@ import {track, enable as enableWorkersLogger} from 'workers-logger';
 import {ExecutionContext} from '@cloudflare/workers-types/experimental';
 import {logflareReport} from './utils/logflare.js';
 import {consoleReporter} from './utils/basicReporters.js';
-import {createServer} from 'push-notification-server';
+import {createServer} from 'push-notification-service-server';
 
 enableWorkersLogger('*');
 const logger = logs('worker');
@@ -15,7 +15,7 @@ async function wrapWithLogger(
 	request: Request,
 	env: Env,
 	ctx: ExecutionContext,
-	callback: (request: Request, env: Env, ctx: ExecutionContext) => Promise<Response>,
+	callback: (request: Request, env: Env, ctx: ExecutionContext) => Promise<Response>
 ): Promise<Response> {
 	const namespaces = env.NAMED_LOGS || '*';
 	let logLevel = 3;
@@ -37,7 +37,7 @@ async function wrapWithLogger(
 		'PUSH_NOTIFICATION',
 		env.LOGFLARE_API_KEY && env.LOGFLARE_SOURCE
 			? logflareReport({batchAsSingleEvent: false, apiKey: env.LOGFLARE_API_KEY, source: env.LOGFLARE_SOURCE})
-			: consoleReporter,
+			: consoleReporter
 	);
 	const response = await (globalThis as any)._runWithLogger(_trackLogger, () => {
 		return callback(request, env, ctx).catch((err) => {

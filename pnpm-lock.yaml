@@ -179,7 +179,7 @@ importers:
       named-logs-context:
         specifier: ^0.1.1
         version: 0.1.1
-      push-notification-server:
+      push-notification-service-server:
         specifier: workspace:*
         version: link:../../packages/server
       remote-sql-d1:

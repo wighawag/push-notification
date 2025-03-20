@@ -1,7 +1,7 @@
 {
   "name": "push-notification-subscription-client",
   "version": "0.0.0",
-  "description": "web client for subscribing to push-notification-server",
+  "description": "web client for subscribing to push-notification-service-server",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

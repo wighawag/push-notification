@@ -8,7 +8,7 @@ import {getDummyAPI} from './api/dummy.js';
 import {logs} from 'named-logs';
 import {getAPI} from './api/index.js';
 
-const logger = logs('push-notification-server');
+const logger = logs('push-notification-service-server');
 
 export type {Env};
 

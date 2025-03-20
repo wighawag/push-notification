@@ -20,7 +20,7 @@
     "format:check": "prettier --check . && pnpm -r format:check",
     "---------------------- DEV ----------------------": "",
     "cf-worker:dev": "pnpm --filter push-notification-cf-worker dev",
-    "server:dev": "pnpm --filter push-notification-server dev",
+    "server:dev": "pnpm --filter push-notification-service-server dev",
     "subscription-client:dev": "pnpm --filter push-notification-subscription-client dev",
     "example:svelte:dev": "pnpm --filter push-notification-example-svelte dev",
     "---------------------- DEPLOY ----------------------": "",
