@@ -1,6 +1,6 @@
 {
-  "name": "push-notification-cf-worker",
-  "version": "0.0.0",
+  "name": "push-notification-server-cf-worker",
+  "version": "0.0.1",
   "publishConfig": {
     "access": "public"
   },

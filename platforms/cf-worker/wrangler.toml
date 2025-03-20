@@ -13,6 +13,3 @@ head_sampling_rate = 1 # optional. default = 1.
 d1_databases = [
   { binding = "DB", database_name = "push-notification-db", database_id = "df3f9e4f-4835-45c8-88ef-af9050637b11" }
 ]
-
-[triggers]
-crons = ["* * * * *", "*/1 * * * *", "*/2 * * * *"]
