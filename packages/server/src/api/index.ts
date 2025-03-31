@@ -16,10 +16,40 @@ export type SubscriptionRegistration = {
 	subscription: Subscription;
 };
 
+type NotificationAction = {
+	action: string;
+	title: string;
+	navigate: string;
+	icon?: string;
+};
+type DeclarativePushNotification = {
+	web_push: 8030;
+	notification: {
+		title: string;
+		navigate: string;
+		dir?: NotificationDirection;
+		lang?: string;
+		body?: string;
+		tag?: string;
+		image?: string;
+		icon?: string;
+		badge?: string;
+		vibrate?: number[];
+		timestamp?: number;
+		renotify?: boolean;
+		silent?: boolean;
+		requireInteraction?: boolean;
+		data?: Record<string, unknown>;
+		actions?: NotificationAction[];
+	};
+	app_badge?: number;
+	mutable?: boolean;
+};
+
 export type Push = {
 	address: string;
 	domain: string;
-	message: string;
+	message: DeclarativePushNotification;
 	topic?: string;
 	urgency?: Urgency;
 };
@@ -76,7 +106,7 @@ export function getAPI(options: ServerOptions) {
 				if (subscription.expirationTime && subscription.expirationTime < Date.now() / 1000) {
 					toDelete.push(subscription.endpoint);
 				} else {
-					const response = await sendNotification(subscription, push.message, {
+					const response = await sendNotification(subscription, JSON.stringify(push.message), {
 						subject: 'mailto:notifications@etherplay.io',
 						vapidKeys: {
 							privateKey: config.env.VAPID_PRIVATE_KEY,

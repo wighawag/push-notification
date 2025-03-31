@@ -16,7 +16,13 @@
 	}
 
 	function push() {
-		pushNotifications.testPush(message);
+		pushNotifications.testPush({
+			web_push: 8030,
+			notification: {
+				navigate: '/',
+				title: message
+			}
+		});
 	}
 
 	let message = 'hello';

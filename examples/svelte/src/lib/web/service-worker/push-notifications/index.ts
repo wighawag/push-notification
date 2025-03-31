@@ -1,6 +1,7 @@
 import { derived, type Readable } from 'svelte/store';
 import { type ServiceWorkerState } from '..';
 import { urlB64ToUint8Array } from './utils';
+import type { DeclarativePushNotification } from '$lib/types';
 
 export type SettledPushNotificationsState =
 	| {
@@ -229,7 +230,7 @@ export function createPushNotificationService(params: {
 		}
 	}
 
-	async function testPush(message: string) {
+	async function testPush(message: DeclarativePushNotification) {
 		const accountAddress = _account?.signer?.address;
 		if (!accountAddress) {
 			throw new Error(`no account`);

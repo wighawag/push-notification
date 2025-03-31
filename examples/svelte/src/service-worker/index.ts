@@ -268,7 +268,7 @@ type DeclarativePushNotification = {
 		renotify?: boolean;
 		silent?: boolean;
 		requireInteraction?: boolean;
-		data?: { url?: string }; // TODO any json
+		data?: Record<string, unknown>;
 		actions?: NotificationAction[];
 	};
 	app_badge?: number;

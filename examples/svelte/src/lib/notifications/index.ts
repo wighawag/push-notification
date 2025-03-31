@@ -1,3 +1,5 @@
+import { pushState } from '$app/navigation';
+import { page } from '$app/state';
 import { get, writable } from 'svelte/store';
 type JSONNotification = {
 	title: string;
@@ -26,7 +28,7 @@ export function createNotificationsService() {
 		remove(id);
 		if (notification?.type === 'push-notification') {
 			if (notification.data.options.data?.navigate) {
-				window.history.pushState(null, '', notification.data.options.data.navigate);
+				pushState(notification.data.options.data.navigate, page.state);
 			}
 		}
 	}
