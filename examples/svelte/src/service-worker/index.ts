@@ -23,7 +23,7 @@ if (OFFLINE_CACHE === 'all') {
 let _logEnabled = true; // TODO false
 function log(...args: any[]) {
 	if (_logEnabled) {
-		console.debug(`[Service Worker #${ID}] ${args[0]}`, ...args.slice(2));
+		console.debug(`[Service Worker #${ID}] ${args[0]}`, ...args.slice(1));
 	}
 }
 
@@ -245,25 +245,40 @@ async function getClientsStatus(): Promise<{
 	};
 }
 
-type JSONNotification = {
+type NotificationAction = {
+	action: string;
 	title: string;
-	options: {
-		badge?: string;
-		body: string;
-		data?: { url?: string };
+	navigate: string;
+	icon?: string;
+};
+type DeclarativePushNotification = {
+	web_push: 8030;
+	notification: {
+		title: string;
+		navigate: string;
 		dir?: NotificationDirection;
-		icon?: string;
 		lang?: string;
-		requireInteraction?: boolean;
-		silent?: boolean | null;
+		body?: string;
 		tag?: string;
+		image?: string;
+		icon?: string;
+		badge?: string;
+		vibrate?: number[];
+		timestamp?: number;
+		renotify?: boolean;
+		silent?: boolean;
+		requireInteraction?: boolean;
+		data?: { url?: string }; // TODO any json
+		actions?: NotificationAction[];
 	};
+	app_badge?: number;
+	mutable?: boolean;
 };
 
 async function handlePush(data?: string) {
 	const appActive = await getClientsStatus();
 
-	const defaultNotification: JSONNotification = {
+	const notificationTuple: { title: string; options: NotificationOptions } = {
 		title: 'Notification',
 		options: {
 			body: 'You have a new notification',
@@ -271,36 +286,71 @@ async function handlePush(data?: string) {
 			badge: '/favicon.png' // TODO template it ?
 		}
 	};
-	let dataAsJson: JSONNotification | undefined;
 
 	if (data) {
 		try {
-			// dataAsJson = JSON.parse(data);
-			const json = JSON.parse(data);
-			dataAsJson = {
-				...defaultNotification,
-				...json,
-				options: { ...defaultNotification.options, ...json.options }
-			};
+			const json: DeclarativePushNotification = JSON.parse(data);
+			if (json.web_push === 8030) {
+				const notif = json.notification;
+				notificationTuple.options = {
+					badge: notif.badge,
+					body: notif.body,
+					data: notif.data,
+					dir: notif.dir,
+					icon: notif.icon,
+					lang: notif.lang,
+					requireInteraction: notif.requireInteraction,
+					silent: notif.silent,
+					tag: notif.tag
+				};
+				notificationTuple.title = notif.title;
+
+				if (!notificationTuple.options.icon) {
+					notificationTuple.options.icon = notif.image;
+				}
+
+				if (notif.navigate) {
+					if (!notificationTuple.options.data) {
+						notificationTuple.options.data = { navigate: notif.navigate };
+					} else {
+						if (
+							typeof notificationTuple.options.data === 'object' &&
+							!notificationTuple.options.data.navigate
+						) {
+							notificationTuple.options.data = {
+								...notificationTuple.options.data,
+								navigate: notif.navigate
+							};
+						}
+					}
+				}
+				// TODO ?
+				// notif.actions
+				// notif.vibrate
+				// notif.timestamp
+				// notif.renotify
+			} else {
+				notificationTuple.title = json.notification?.title || (json as any).title || 'Notification';
+				notificationTuple.options = json.notification || (json as any).options;
+			}
 		} catch {
-			dataAsJson = {
-				...defaultNotification,
-				options: { ...defaultNotification.options, body: data }
-			};
+			notificationTuple.options.body = data;
 		}
 	}
 
-	if (!dataAsJson) {
-		dataAsJson = defaultNotification;
-	}
+	log(`handlePush`, data, notificationTuple);
 
 	if (appActive.atLeastOneVisibleAndFocused) {
+		log(`posting notification to active app`, notificationTuple);
 		appActive.atLeastOneVisibleAndFocused.postMessage({
 			type: 'notification',
-			notification: dataAsJson
+			notification: {
+				title: notificationTuple.title,
+				options: notificationTuple.options
+			}
 		});
 	} else {
-		await sw.registration.showNotification(dataAsJson.title, dataAsJson.options);
+		await sw.registration.showNotification(notificationTuple.title, notificationTuple.options);
 	}
 }
 sw.addEventListener('push', function (event: PushEvent) {
@@ -317,7 +367,7 @@ async function handleNotificationClick(notification: Notification) {
 	const swPath = location.pathname;
 	const swFolder = swPath.substring(0, swPath.lastIndexOf('/') + 1);
 
-	let url = notification.data?.url;
+	let url = notification.data?.navigate;
 	if (url) {
 		if (!url.startsWith('/') && url.indexOf(':/') == -1) {
 			url = swFolder + url;

@@ -1,17 +1,7 @@
 import { get, writable } from 'svelte/store';
 type JSONNotification = {
 	title: string;
-	options: {
-		badge?: string;
-		body: string;
-		data?: { url?: string };
-		dir?: NotificationDirection;
-		icon?: string;
-		lang?: string;
-		requireInteraction?: boolean;
-		silent?: boolean | null;
-		tag?: string;
-	};
+	options: NotificationOptions;
 };
 
 export type PushNotification = { type: 'push-notification'; data: JSONNotification };
@@ -35,8 +25,8 @@ export function createNotificationsService() {
 		const notification = get(store).find((v) => v.id == id);
 		remove(id);
 		if (notification?.type === 'push-notification') {
-			if (notification.data.options.data?.url) {
-				window.history.pushState(null, '', notification.data.options.data.url);
+			if (notification.data.options.data?.navigate) {
+				window.history.pushState(null, '', notification.data.options.data.navigate);
 			}
 		}
 	}
