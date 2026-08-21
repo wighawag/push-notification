@@ -32,6 +32,18 @@ This matters beyond notifications: the same trigger service will drive value-bea
 
 ---
 
+## ENHANCEMENT-1 (not a gap) a "has any live subscription" endpoint
+
+The trigger service must garbage-collect abandoned triggers: a player who registers "notify me of arrivals at these systems" and then uninstalls leaves a trigger that keeps matching, digesting and calling `/push` forever, for nobody. Its primary defence is a TTL with client renewal, but the fast path is to notice that the subscriber has no devices left (see that project's `docs/adr/0012`).
+
+That can be inferred today from a `/push` response of `successfullPush: 0`, but only by **sending** first, which means doing all the matching and digest work before discovering it was pointless. Checking directly is not possible: `/registered/:address/:domain/:subscriptionID` requires a subscription ID the caller does not have.
+
+**Suggestion.** An endpoint answering "does `(address, domain)` have any live subscription", e.g. `GET /registered/:address/:domain`, returning a boolean and ideally a count. Cheap here (it is the same `getSubscriptions` lookup already used by `/push`), and it lets a caller skip work rather than discover its futility afterwards.
+
+Low priority: the inference path works, it is just wasteful. Worth doing whenever the auth work in GAP-1 touches these routes anyway.
+
+---
+
 ## Not a gap, worth recording
 
 - `410 Gone` / `404` deleting the subscription, plus the `expirationTime` check, means **subscription lifecycle is already handled**. The trigger service needs to do nothing about revocation or expiry, which is why keying on address rather than endpoint is the right call.
