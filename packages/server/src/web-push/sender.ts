@@ -7,7 +7,7 @@ export function webPushSender(env: Env): PushSender {
 	return async (subscription, payload, {topic, urgency}) => {
 		try {
 			const response = await sendNotification(subscription, payload, {
-				subject: 'mailto:notifications@etherplay.io',
+				subject: env.VAPID_SUBJECT || 'mailto:notifications@etherplay.io',
 				vapidKeys: {
 					privateKey: env.VAPID_PRIVATE_KEY,
 					publicKey: env.VAPID_PUBLIC_KEY,

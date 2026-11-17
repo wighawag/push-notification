@@ -4,3 +4,6 @@ VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 # <domain>:<sha256 hex of the token>, comma separated, one per calling service
 PUSH_TOKENS=
+# optional: the VAPID contact, and the origin request signatures name
+VAPID_SUBJECT=
+PUBLIC_ORIGIN=

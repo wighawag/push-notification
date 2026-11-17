@@ -2,7 +2,7 @@
   "name": "push-notification-service-server",
   "version": "0.0.3",
   "description": "push notification server",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "publishConfig": {
     "access": "public"
   },

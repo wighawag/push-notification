@@ -24,9 +24,17 @@ The operator configures the domain tokens by their SHA-256, `PUSH_TOKENS="<domai
 printf %s "$TOKEN" | sha256sum | cut -d' ' -f1
 ```
 
+## Licenses
+
+The server and its platforms are AGPL-3.0 (the repo's `LICENSE`); the browser client, `packages/subscription-client`, is MIT, since apps import it.
+
+## Limits
+
+A holder of a domain token can push as often as it likes: callers are trusted services, and rate limiting is theirs (the trigger service bounds by rate, etherfold ADR-0011).
+
 ## Platforms
 
-- `platforms/nodejs`: a Node.js process on libSQL (`DB` a libSQL URL, `PORT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUSH_TOKENS`; see its `.env.default`), and `createNodeServer` for the app in process.
+- `platforms/nodejs`: a Node.js process on libSQL (`DB` a libSQL URL, `PORT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `PUSH_TOKENS`, `PUBLIC_ORIGIN`; see its `.env.default`), and `createNodeServer` for the app in process.
 - `platforms/cf-worker`: a Cloudflare Worker on D1.
 
 ## Getting Started

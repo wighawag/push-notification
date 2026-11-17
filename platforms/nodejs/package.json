@@ -41,5 +41,6 @@
     "format:check": "prettier --check .",
     "format:write": "prettier --write .",
     "test": "vitest"
-  }
+  },
+  "license": "AGPL-3.0-only"
 }

@@ -6,7 +6,7 @@ push-notification-service-server as a Cloudflare Worker on D1 (`wrangler.toml`, 
 
 Set the secrets with `wrangler -e production secret put <NAME>`:
 
-- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: the Web Push keys;
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: the Web Push keys, and `VAPID_SUBJECT` (optional) the contact push services are given;
 - `PUSH_TOKENS`: `<domain>:<sha256 hex of the token>`, comma separated, one per calling service;
 - `PUBLIC_ORIGIN` (optional): the origin request signatures name, when the worker is reached under another host than its request URL's.
 
