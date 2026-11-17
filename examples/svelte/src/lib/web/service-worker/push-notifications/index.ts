@@ -1,7 +1,13 @@
 import { derived, type Readable } from 'svelte/store';
 import { type ServiceWorkerState } from '..';
 import { urlB64ToUint8Array } from './utils';
-import type { DeclarativePushNotification } from '$lib/types';
+import {
+	delegatePublicKey,
+	fromDomainToOrigin,
+	originPublicKeyPublicationMessage,
+	REQUEST_SIGNATURE_HEADER,
+	signRequest
+} from 'missiv-identity';
 
 export type SettledPushNotificationsState =
 	| {
@@ -31,7 +37,13 @@ export type PushNotificationsState =
 			error?: any;
 	  };
 
-type PrivateAccount = { signer: { address: string; privateKey: string } | undefined } | undefined;
+/**
+ * The account notifications are addressed to (`owner`, the wallet) and the
+ * delegate key the app holds for it (`signer`), which signs each registration.
+ */
+type PrivateAccount =
+	| { owner: string; signer: { address: string; privateKey: string } | undefined }
+	| undefined;
 
 export function createPushNotificationService(params: {
 	serverPublicKey: string;
@@ -39,13 +51,18 @@ export function createPushNotificationService(params: {
 	domain: string;
 	account: Readable<PrivateAccount>;
 	serviceWorker: Readable<ServiceWorkerState>;
+	/**
+	 * The owner's wallet signing `message` (EIP-191): the ownership proof that
+	 * authorizes the delegate key for this domain. Asked once per registration.
+	 */
+	signOwnership: (owner: string, message: string) => Promise<`0x${string}`>;
 }) {
 	const domain = params.domain;
 	async function getSubscriptionState(
 		registration: ServiceWorkerRegistration,
 		account: PrivateAccount
 	): Promise<PushNotificationsState> {
-		const accountAddress = account?.signer?.address;
+		const accountAddress = account?.signer ? account.owner : undefined;
 		if (!accountAddress) {
 			return {
 				settled: false,
@@ -145,7 +162,7 @@ export function createPushNotificationService(params: {
 			return;
 		}
 		const applicationServerKey = urlB64ToUint8Array(params.serverPublicKey);
-		const accountAddress = _account?.signer?.address;
+		const accountAddress = _account?.signer ? _account.owner : undefined;
 		if (
 			accountAddress &&
 			_serviceWorker &&
@@ -163,11 +180,11 @@ export function createPushNotificationService(params: {
 				.then(async function (subscription) {
 					// TODO one more state update to show registrating on server
 
-					if (_account?.signer?.address != accountBeingUsed) {
+					if (!_account?.signer || _account.owner != accountBeingUsed) {
 						return;
 					}
 
-					await _registerOnServer(_account.signer.address, subscription);
+					await _registerOnServer(_account.owner, _account.signer.privateKey, subscription);
 				})
 				.catch(function (error) {
 					if (Notification.permission === 'denied') {
@@ -185,23 +202,38 @@ export function createPushNotificationService(params: {
 		}
 	}
 
-	async function _registerOnServer(address: string, subscription: PushSubscription) {
+	async function _registerOnServer(
+		address: string,
+		delegatePrivateKey: string,
+		subscription: PushSubscription
+	) {
 		let registeredOnServer = false;
 		try {
+			// the wallet authorizes the delegate key for this domain, the delegate key signs the request
+			const ownershipSignature = await params.signOwnership(
+				address,
+				originPublicKeyPublicationMessage(
+					fromDomainToOrigin(domain),
+					delegatePublicKey(delegatePrivateKey as `0x${string}`)
+				)
+			);
+			const body = JSON.stringify({
+				address,
+				domain: domain,
+				subscription: subscription.toJSON(),
+				ownershipSignature
+			});
 			const response = await fetch(`${params.serverEndpoint}/register`, {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
+					[REQUEST_SIGNATURE_HEADER]: await signRequest(body, delegatePrivateKey as `0x${string}`)
 				},
-				body: JSON.stringify({
-					address,
-					domain: domain,
-					subscription: subscription.toJSON()
-				})
+				body
 			});
 			if (response.ok) {
 				const json = await response.json();
-				if (_account?.signer?.address != address) {
+				if (_account?.owner != address) {
 					// changed in between
 					return;
 				}
@@ -216,9 +248,9 @@ export function createPushNotificationService(params: {
 	}
 
 	function registerOnServer() {
-		const accountAddress = _account?.signer?.address;
-		if (_state.settled && 'subscription' in _state && _state.subscription && accountAddress) {
-			_registerOnServer(accountAddress, _state.subscription);
+		const signer = _account?.signer;
+		if (_state.settled && 'subscription' in _state && _state.subscription && _account && signer) {
+			_registerOnServer(_account.owner, signer.privateKey, _state.subscription);
 		} else {
 			throw new Error(`not ready`);
 		}
@@ -230,26 +262,6 @@ export function createPushNotificationService(params: {
 		}
 	}
 
-	async function testPush(message: DeclarativePushNotification) {
-		const accountAddress = _account?.signer?.address;
-		if (!accountAddress) {
-			throw new Error(`no account`);
-		}
-		const response = await fetch(`${params.serverEndpoint}/push`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				address: accountAddress,
-				domain,
-				message
-			})
-		});
-		const text = await response.text();
-		console.log({ text });
-		return response.ok;
-	}
-
-	return { subscribe, refresh, subscribeToPush, registerOnServer, acknowledgeError, testPush };
+	// a push is sent by a service holding the domain's token (POST /push), never by the browser
+	return { subscribe, refresh, subscribeToPush, registerOnServer, acknowledgeError };
 }

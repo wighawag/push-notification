@@ -1,38 +1,35 @@
-# sv
+# push-notification-example-svelte
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A SvelteKit page that subscribes a browser to push notifications from push-notification-service-server, for a fake wallet account (`src/lib/fake-owner-account`) and the delegate key derived from it (`src/lib/private-account`).
 
-## Creating a project
+## How it registers
 
-If you're seeing this, you've probably already done this step. Congrats!
+`src/lib/web/service-worker/push-notifications` subscribes the service worker with the server's VAPID public key, then calls `POST /api/register` with two proofs, both from missiv-identity:
 
-```bash
-# create a new project in the current directory
-npx sv create
+- `ownershipSignature`: the wallet's signature over the publication message naming the delegate key for this domain's origin (`originPublicKeyPublicationMessage(fromDomainToOrigin(domain), delegatePublicKey(privateKey))`), one wallet prompt per registration;
+- the `SIGNATURE` header: the delegate key's signature over the raw body (`signRequest`).
 
-# create a new project in my-app
-npx sv create my-app
+The subscription is then keyed by the WALLET address, so a service notifying that account reaches every device it registered.
+
+## Sending a push
+
+The page cannot push: `POST /api/push` takes a service's token for the domain. To try it locally, run the nodejs server with a token for `push-notifications-example.etherplay.io` and send one with curl:
+
+```sh
+TOKEN=a-local-token
+PUSH_TOKENS="push-notifications-example.etherplay.io:$(printf %s "$TOKEN" | sha256sum | cut -d' ' -f1)" \
+  VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... pnpm --filter push-notification-service-server-nodejs start
+
+curl -X POST http://localhost:34005/api/push \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: try-1' \
+  -d '{"address":"<the wallet address>","domain":"push-notifications-example.etherplay.io","message":{"web_push":8030,"notification":{"title":"hello","navigate":"/"}}}'
 ```
+
+`PUBLIC_VAPID_SERVER_PUBLIC_KEY` in `.env` must be the server's `VAPID_PUBLIC_KEY`.
 
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```sh
+pnpm dev
 ```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.

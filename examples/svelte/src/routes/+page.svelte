@@ -14,18 +14,6 @@
 	function registerOnServer() {
 		pushNotifications.registerOnServer();
 	}
-
-	function push() {
-		pushNotifications.testPush({
-			web_push: 8030,
-			notification: {
-				navigate: '/',
-				title: message
-			}
-		});
-	}
-
-	let message = 'hello';
 </script>
 
 {$fakeOwnerAccount?.address} / {$privateAccount?.signer?.address}
@@ -73,5 +61,7 @@
 
 <hr />
 
-<input type="text" bind:value={message} />
-<button class="btn" onclick={push}>push</button>
+<p>
+	A push is sent by a service holding this domain's token, not by the page: see the example's
+	README.
+</p>

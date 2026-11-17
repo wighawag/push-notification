@@ -64,10 +64,18 @@ export function createFakeOwnerAccount() {
 		};
 	}
 
+	async function signMessage(message: string): Promise<`0x${string}`> {
+		if (!currentAccount) {
+			throw new Error(`no account`);
+		}
+		return currentAccount.viemAccount.signMessage({ message });
+	}
+
 	return {
 		subscribe: store.subscribe,
 		switchAccount,
 		disableAccount,
-		getLocalSigner
+		getLocalSigner,
+		signMessage
 	};
 }

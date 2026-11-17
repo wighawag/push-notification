@@ -35,6 +35,9 @@ importers:
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
+      missiv-identity:
+        specifier: link:../../../../../missiv/tf-S1/main/packages/identity
+        version: link:../../../../../missiv/tf-S1/main/packages/identity
       named-logs:
         specifier: ^0.3.2
         version: 0.3.2

@@ -35,7 +35,13 @@ export const pushNotifications = createPushNotificationService({
 	serverPublicKey: PUBLIC_VAPID_SERVER_PUBLIC_KEY,
 	domain: 'push-notifications-example.etherplay.io',
 	account: privateAccount,
-	serviceWorker
+	serviceWorker,
+	signOwnership: async (owner, message) => {
+		if (get(fakeOwnerAccount)?.address !== owner) {
+			throw new Error(`the owner changed`);
+		}
+		return fakeOwnerAccount.signMessage(message);
+	}
 });
 
 (globalThis as any).state = {
