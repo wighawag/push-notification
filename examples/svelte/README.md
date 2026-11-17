@@ -1,10 +1,10 @@
 # push-notification-example-svelte
 
-A SvelteKit page that subscribes a browser to push notifications from push-notification-service-server, for a fake wallet account (`src/lib/fake-owner-account`) and the delegate key derived from it (`src/lib/private-account`).
+A SvelteKit page that subscribes a browser to push notifications from @push-notification/server, for a fake wallet account (`src/lib/fake-owner-account`) and the delegate key derived from it (`src/lib/private-account`).
 
 ## How it registers
 
-`src/lib/state.ts` wires push-notification-subscription-client (`createPushNotifications`): it subscribes the service worker with the server's VAPID public key, then calls `POST /api/register` with two proofs, both from missiv-identity (and `POST /api/unregister` to disable):
+`src/lib/state.ts` wires @push-notification/client (`createPushNotifications`): it subscribes the service worker with the server's VAPID public key, then calls `POST /api/register` with two proofs, both from missiv-identity (and `POST /api/unregister` to disable):
 
 - `ownershipSignature`: the wallet's signature over the publication message naming the delegate key for this domain's origin (`originPublicKeyPublicationMessage(fromDomainToOrigin(domain), delegatePublicKey(privateKey))`), one wallet prompt per registration;
 - the `SIGNATURE` header: the delegate key's signature over the request envelope, which names the server's origin, `POST /api/register`, a timestamp and the body (`signRequest`); the server refuses it after a minute.
@@ -18,7 +18,7 @@ The page cannot push: `POST /api/push` takes a service's token for the domain. T
 ```sh
 TOKEN=a-local-token
 PUSH_TOKENS="push-notifications-example.etherplay.io:$(printf %s "$TOKEN" | sha256sum | cut -d' ' -f1)" \
-  VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... pnpm --filter push-notification-service-server-nodejs start
+  VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... pnpm --filter @push-notification/cli start
 
 curl -X POST http://localhost:34005/api/push \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \

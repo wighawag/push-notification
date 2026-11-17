@@ -6,7 +6,7 @@ import {get, writable, type Readable} from 'sveltore';
 import {generatePrivateKey, privateKeyToAccount} from 'viem/accounts';
 import {createClient} from '@libsql/client';
 import {RemoteLibSQL} from 'remote-sql-libsql';
-import {createServer, setupDatabase, type PushSender} from 'push-notification-service-server';
+import {createServer, setupDatabase, type PushSender} from '@push-notification/server';
 import {createPushNotifications, type PushAccount, type PushState} from '../src/index.js';
 
 const DOMAIN = 'game.example';

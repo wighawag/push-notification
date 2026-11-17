@@ -1,6 +1,6 @@
 import {createClient, type Client} from '@libsql/client';
 import {RemoteLibSQL} from 'remote-sql-libsql';
-import {createServer, setupDatabase, type Env, type PushSender} from 'push-notification-service-server';
+import {createServer, setupDatabase, type Env, type PushSender} from '@push-notification/server';
 
 export type NodeServerOptions = {
 	/** a libSQL URL (file:..., libsql://..., :memory:) or a client already made */

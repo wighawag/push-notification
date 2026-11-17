@@ -1,13 +1,13 @@
 {
-  "name": "push-notification-service-server-nodejs",
+  "name": "@push-notification/cli",
   "version": "0.0.3",
-  "description": "push-notification-service-server as a Node.js process on libSQL",
+  "description": "push-notification-server as a Node.js process on libSQL: the push-notification-server CLI",
   "publishConfig": {
     "access": "public"
   },
   "type": "module",
   "bin": {
-    "push-notification-service-server-nodejs": "./dist/cli.js"
+    "push-notification-server": "./dist/cli.js"
   },
   "exports": {
     ".": {
@@ -24,7 +24,7 @@
     "@hono/node-server": "^1.13.8",
     "@libsql/client": "^0.15.15",
     "ldenv": "^0.3.12",
-    "push-notification-service-server": "workspace:*",
+    "@push-notification/server": "workspace:*",
     "remote-sql-libsql": "^0.0.6"
   },
   "devDependencies": {

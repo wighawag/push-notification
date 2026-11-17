@@ -25,7 +25,7 @@ layout {
 			args "-c" "pnpm nodejs:build:watch; cd platforms/nodejs; ${SHELL-bash}"
 		}
 		pane name="nodejs server" command="bash"  {
-			args "-c" "pnpm --filter push-notification-service-server-nodejs build && pnpm nodejs:dev; cd platforms/nodejs; ${SHELL-bash}"
+			args "-c" "pnpm --filter @push-notification/cli build && pnpm nodejs:dev; cd platforms/nodejs; ${SHELL-bash}"
 		}
 	}
 

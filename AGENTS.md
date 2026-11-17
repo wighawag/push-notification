@@ -24,7 +24,7 @@ The routes are used by services outside this repo (the trigger service, jolly-ro
 
 ## Running it
 
-`pnpm --filter push-notification-service-server-nodejs start` (after `pnpm build`) serves on `PORT` (34005) with `DB` a libSQL URL; `pnpm start` runs the whole dev stack in zellij. Stop what you start.
+`pnpm --filter @push-notification/cli start` (after `pnpm build`) serves on `PORT` (34005) with `DB` a libSQL URL; `pnpm start` runs the whole dev stack in zellij. Stop what you start.
 
 ## Git transitions
 

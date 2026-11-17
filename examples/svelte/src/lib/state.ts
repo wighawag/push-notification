@@ -1,5 +1,5 @@
 import { derived, get } from 'svelte/store';
-import { createPushNotifications, type PushAccount } from 'push-notification-subscription-client';
+import { createPushNotifications, type PushAccount } from '@push-notification/client';
 import { PUBLIC_VAPID_SERVER_PUBLIC_KEY } from './config';
 import { createServiceWorker } from './web/service-worker';
 import { createFakeOwnerAccount } from './fake-owner-account';

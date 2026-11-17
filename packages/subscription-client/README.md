@@ -1,9 +1,9 @@
-# push-notification-subscription-client
+# @push-notification/client
 
-The browser side of push-notification-service-server: a store of whether the current account receives push notifications on this device, with `enable()` and `disable()`. The store is Svelte-compatible ([sveltore](https://github.com/wighawag/sveltore)), so a Svelte app reads it with `$` and its inputs can be any Svelte stores.
+The browser side of @push-notification/server: a store of whether the current account receives push notifications on this device, with `enable()` and `disable()`. The store is Svelte-compatible ([sveltore](https://github.com/wighawag/sveltore)), so a Svelte app reads it with `$` and its inputs can be any Svelte stores.
 
 ```ts
-import {createPushNotifications} from 'push-notification-subscription-client';
+import {createPushNotifications} from '@push-notification/client';
 
 const push = createPushNotifications({
 	serverEndpoint: 'https://push.example/api',

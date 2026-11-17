@@ -1,7 +1,7 @@
 {
-  "name": "push-notification-subscription-client",
+  "name": "@push-notification/client",
   "version": "0.0.0",
-  "description": "the browser side of push-notification-service-server: a Svelte-compatible store of whether an account receives push on this device, and enable / disable",
+  "description": "the browser side of @push-notification/server: a Svelte-compatible store of whether an account receives push on this device, and enable / disable",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -26,7 +26,7 @@
     "@noble/secp256k1": "^2.3.0",
     "as-soon": "^0.0.11",
     "prettier": "^3.5.2",
-    "push-notification-service-server": "workspace:*",
+    "@push-notification/server": "workspace:*",
     "remote-sql-libsql": "^0.0.6",
     "typescript": "^5.6.3",
     "viem": "^2.23.5",

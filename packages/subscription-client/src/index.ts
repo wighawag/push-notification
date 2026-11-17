@@ -1,4 +1,4 @@
-// The browser side of push-notification-service-server: a store of whether the
+// The browser side of @push-notification/server: a store of whether the
 // current account receives push notifications on this device, and the actions
 // that change it. It subscribes the service worker with the server's VAPID key,
 // registers the subscription for the account (both proofs, missiv-identity),

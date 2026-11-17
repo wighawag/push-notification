@@ -1,6 +1,6 @@
-# push-notification-service-server-cf-worker
+# @push-notification/cf-worker
 
-push-notification-service-server as a Cloudflare Worker on D1 (`wrangler.toml`, environment `production`).
+@push-notification/server as a Cloudflare Worker on D1 (`wrangler.toml`, environment `production`).
 
 ## Configure
 

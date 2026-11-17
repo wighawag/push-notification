@@ -29,6 +29,9 @@ importers:
       '@noble/ciphers':
         specifier: ^1.2.1
         version: 1.2.1
+      '@push-notification/client':
+        specifier: workspace:*
+        version: link:../../packages/subscription-client
       '@scure/base':
         specifier: ^1.2.4
         version: 1.2.4
@@ -41,9 +44,6 @@ importers:
       perfect-debounce:
         specifier: ^1.0.0
         version: 1.0.0
-      push-notification-subscription-client:
-        specifier: workspace:*
-        version: link:../../packages/subscription-client
     devDependencies:
       '@playwright/test':
         specifier: ^1.49.1
@@ -185,15 +185,15 @@ importers:
       '@noble/secp256k1':
         specifier: ^2.3.0
         version: 2.3.0
+      '@push-notification/server':
+        specifier: workspace:*
+        version: link:../server
       as-soon:
         specifier: ^0.0.11
         version: 0.0.11
       prettier:
         specifier: ^3.5.2
         version: 3.5.2
-      push-notification-service-server:
-        specifier: workspace:*
-        version: link:../server
       remote-sql-libsql:
         specifier: ^0.0.6
         version: 0.0.6(@libsql/core@0.14.0)
@@ -209,15 +209,15 @@ importers:
 
   platforms/cf-worker:
     dependencies:
+      '@push-notification/server':
+        specifier: workspace:*
+        version: link:../../packages/server
       named-logs:
         specifier: ^0.3.2
         version: 0.3.2
       named-logs-context:
         specifier: ^0.1.1
         version: 0.1.1
-      push-notification-service-server:
-        specifier: workspace:*
-        version: link:../../packages/server
       remote-sql-d1:
         specifier: ^0.0.6
         version: 0.0.6(@cloudflare/workers-types@4.20250224.0)
@@ -255,12 +255,12 @@ importers:
       '@libsql/client':
         specifier: ^0.15.15
         version: 0.15.15
+      '@push-notification/server':
+        specifier: workspace:*
+        version: link:../../packages/server
       ldenv:
         specifier: ^0.3.12
         version: 0.3.12
-      push-notification-service-server:
-        specifier: workspace:*
-        version: link:../../packages/server
       remote-sql-libsql:
         specifier: ^0.0.6
         version: 0.0.6(@libsql/core@0.14.0)

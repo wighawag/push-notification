@@ -9,7 +9,7 @@ import {fromDomainToOrigin, REQUEST_SIGNATURE_HEADER, verifyRequest} from 'missi
 import {Urgency} from '../web-push/types.js';
 import {authorizeDomain, bearerToken} from '../auth/tokens.js';
 
-const logger = logs('push-notification-service-server-api');
+const logger = logs('push-notification-server-api');
 
 /** How long a request's claim on a delivery holds before a retry may take it over. */
 const CLAIM_TIMEOUT_MS = 60_000;

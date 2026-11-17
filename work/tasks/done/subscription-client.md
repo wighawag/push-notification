@@ -1,5 +1,5 @@
 ---
-title: 'push-notification-subscription-client: the browser side as a package'
+title: '@push-notification/client: the browser side as a package'
 slug: subscription-client
 blockedBy: []
 ---

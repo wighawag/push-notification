@@ -1,6 +1,6 @@
 ---
-'push-notification-service-server': minor
-'push-notification-service-server-cf-worker': minor
+'@push-notification/server': minor
+'@push-notification/cf-worker': minor
 ---
 
 Breaking: the routes a trigger service needs, made safe for it.

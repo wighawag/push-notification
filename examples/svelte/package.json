@@ -32,7 +32,7 @@
 		"lz-string": "^1.5.0",
 		"named-logs": "^0.3.2",
 		"perfect-debounce": "^1.0.0",
-		"push-notification-subscription-client": "workspace:*"
+		"@push-notification/client": "workspace:*"
 	},
 	"scripts": {
 		"dev": "vite dev",

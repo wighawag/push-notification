@@ -10,7 +10,7 @@ import {getAPI} from './api/index.js';
 import {RemoteSQL} from 'remote-sql';
 import {RemoteSQLStorage} from './storage/RemoteSQLStorage.js';
 
-const logger = logs('push-notification-service-server');
+const logger = logs('push-notification-server');
 
 export type {Env};
 export type {ServerOptions, PushSender, PushSendResult, Subscription} from './types.js';

@@ -1,5 +1,5 @@
 {
-  "name": "push-notification-service-server",
+  "name": "@push-notification/server",
   "version": "0.0.3",
   "description": "push notification server",
   "license": "AGPL-3.0-only",
