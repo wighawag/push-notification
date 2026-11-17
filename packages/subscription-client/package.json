@@ -1,6 +1,6 @@
 {
   "name": "@push-notification/client",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "the browser side of @push-notification/server: a Svelte-compatible store of whether an account receives push on this device, and enable / disable",
   "license": "MIT",
   "publishConfig": {
