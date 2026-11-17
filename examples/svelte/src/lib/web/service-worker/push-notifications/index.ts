@@ -72,7 +72,7 @@ export function createPushNotificationService(params: {
 		const subscription = await registration.pushManager.getSubscription();
 		if (subscription) {
 			const registrationOnServerResponse = await fetch(
-				`${params.serverEndpoint}/registered/${accountAddress}/${domain}/${encodeURIComponent(subscription.endpoint)}`
+				`${params.serverEndpoint}/registered/${accountAddress}/${encodeURIComponent(domain)}/${encodeURIComponent(subscription.endpoint)}`
 			);
 			const registrationResult = await registrationOnServerResponse.json();
 
@@ -223,11 +223,16 @@ export function createPushNotificationService(params: {
 				subscription: subscription.toJSON(),
 				ownershipSignature
 			});
-			const response = await fetch(`${params.serverEndpoint}/register`, {
+			// the request envelope names this server's origin and the route
+			const url = new URL(`${params.serverEndpoint}/register`);
+			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					[REQUEST_SIGNATURE_HEADER]: await signRequest(body, delegatePrivateKey as `0x${string}`)
+					[REQUEST_SIGNATURE_HEADER]: await signRequest(
+						{ serverOrigin: url.origin, method: 'POST', path: url.pathname, body },
+						delegatePrivateKey as `0x${string}`
+					)
 				},
 				body
 			});

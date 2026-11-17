@@ -1,3 +1,5 @@
+import {fromDomainToOrigin} from 'missiv-identity';
+
 // GAP-1: a push is made by a service holding a token for the push's domain.
 // The operator configures each token by its SHA-256 (env PUSH_TOKENS), so the
 // configuration holds no secret, and a presented token is compared with every
@@ -5,6 +7,7 @@
 
 export type DomainAuthorization = 'authorized' | 'unauthenticated' | 'forbidden';
 
+/** A configured token: the app origin it is for (its domain, normalized) and its SHA-256. */
 type TokenEntry = {domain: string; hash: Uint8Array};
 
 function hexToBytes(hex: string): Uint8Array {
@@ -31,7 +34,7 @@ export function parseTokens(config: string | undefined): TokenEntry[] {
 			if (separator <= 0 || !/^[0-9a-f]{64}$/.test(hash)) {
 				throw new Error(`PUSH_TOKENS: expected <domain>:<sha256 hex>, got an entry for "${domain || entry}"`);
 			}
-			return {domain, hash: hexToBytes(hash)};
+			return {domain: fromDomainToOrigin(domain), hash: hexToBytes(hash)};
 		});
 }
 
@@ -69,7 +72,7 @@ export async function authorizeDomain(
 	for (const entry of entries) {
 		const match = equalInConstantTime(presented, entry.hash);
 		known = known || match;
-		forDomain = forDomain || (match && entry.domain === domain);
+		forDomain = forDomain || (match && entry.domain === fromDomainToOrigin(domain));
 	}
 	return forDomain ? 'authorized' : known ? 'forbidden' : 'unauthenticated';
 }

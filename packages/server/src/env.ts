@@ -9,4 +9,9 @@ export type Env = {
 	 * is refused.
 	 */
 	PUSH_TOKENS?: string;
+	/**
+	 * This server's public origin, which request signatures name. Unset, the
+	 * request URL's origin is used: set it behind a proxy that changes the host.
+	 */
+	PUBLIC_ORIGIN?: string;
 };

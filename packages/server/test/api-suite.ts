@@ -101,6 +101,31 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 				expect(response.status).toBe(403);
 			});
 
+			it('refuses a request signed for another server or another route', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const forMissiv = await registration(alice, newSubscription(), {serverOrigin: 'https://missiv.example'});
+				expect((await request('/api/register', forMissiv)).status).toBe(403);
+				const forAnotherRoute = await registration(alice, newSubscription(), {path: '/api/unregister'});
+				expect((await request('/api/register', forAnotherRoute)).status).toBe(403);
+			});
+
+			it('refuses a request signed more than a minute ago', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const old = await registration(alice, newSubscription(), {timestamp: Date.now() - 120_000});
+				expect((await request('/api/register', old)).status).toBe(401);
+			});
+
+			it('names the app by its origin: a bare domain and its https origin are one app, an http LAN origin registers', async () => {
+				const alice = await createIdentity(`https://${DOMAIN_A}`);
+				await register(alice);
+				await push({address: alice.address, domain: DOMAIN_A, message});
+				expect(sender.sent).toHaveLength(1);
+
+				const lan = await createIdentity('http://192.168.1.10:5173');
+				const response = await request('/api/register', await registration(lan, newSubscription()));
+				expect(response.status).toBe(200);
+			});
+
 			it('refuses a malformed request signature', async () => {
 				const alice = await createIdentity(DOMAIN_A);
 				const init = await registration(alice, newSubscription());

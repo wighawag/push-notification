@@ -5,7 +5,7 @@ import {Env} from '../env.js';
 import {typiaValidator} from '@hono/typia-validator';
 import {createValidate} from 'typia';
 import {logs} from 'named-logs';
-import {REQUEST_SIGNATURE_HEADER, verifyRequest} from 'missiv-identity';
+import {fromDomainToOrigin, REQUEST_SIGNATURE_HEADER, verifyRequest} from 'missiv-identity';
 import {Urgency} from '../web-push/types.js';
 import {authorizeDomain, bearerToken} from '../auth/tokens.js';
 
@@ -19,10 +19,15 @@ const MAX_IDEMPOTENCY_KEY_LENGTH = 256;
 
 /**
  * POST /register's body. The request carries two proofs (see missiv-identity):
- * the SIGNATURE header, the delegate key's signature over this raw body; and
- * `ownershipSignature`, the wallet's signature over the publication message
- * naming that delegate key for the domain's origin. The subscription is
- * recorded for `address` only if both recover it.
+ * the SIGNATURE header, the delegate key's signature over the request envelope
+ * (this server's origin, `POST /api/register`, a timestamp, this raw body);
+ * and `ownershipSignature`, the wallet's signature over the publication message
+ * naming that delegate key for the app's origin. The subscription is recorded
+ * for `address` only if both recover it.
+ *
+ * `domain` is the app: a bare host (`game.example`, meaning
+ * `https://game.example`; `localhost:5173`, meaning `http://`) or an origin.
+ * Everything is keyed by the origin it names.
  */
 export type SubscriptionRegistration = {
 	/** the account (wallet) address, the key notifications are addressed by */
@@ -113,6 +118,14 @@ async function authorize(c: Context<{Bindings: Env}>, domain: string) {
 	return undefined;
 }
 
+/** The app origin a `domain` names: the key subscriptions, tokens and deliveries are stored under. */
+const appOrigin = (domain: string) => fromDomainToOrigin(domain);
+
+/** This server's public origin, as a request envelope names it: env PUBLIC_ORIGIN, else the request's. */
+function serverOrigin(c: Context<{Bindings: Env}>) {
+	return c.get('config').env.PUBLIC_ORIGIN || new URL(c.req.url).origin;
+}
+
 function isExpired(subscription: Subscription, nowMS: number) {
 	return !!subscription.expirationTime && subscription.expirationTime < nowMS;
 }
@@ -137,20 +150,27 @@ export function getAPI(options: ServerOptions) {
 				if (!requestSignature) {
 					return refuse(c, 401, `the ${REQUEST_SIGNATURE_HEADER} header is required`);
 				}
+				const url = new URL(c.req.url);
+				const origin = appOrigin(registration.domain);
 				const verified = await verifyRequest({
-					domain: registration.domain,
+					serverOrigin: serverOrigin(c),
+					method: c.req.method,
+					path: url.pathname + url.search,
 					body: await c.req.text(),
-					requestSignature,
+					signature: requestSignature,
+					appOrigin: origin,
 					address: registration.address,
 					ownershipSignature: registration.ownershipSignature,
 				});
 				if (!verified.ok) {
 					return verified.reason === 'malformed'
 						? refuse(c, 400, 'a signature is malformed')
-						: refuse(c, 403, `the proofs do not recover ${registration.address} on ${registration.domain}`);
+						: verified.reason === 'expired'
+							? refuse(c, 401, 'the request signature is outside its time window: sign it again')
+							: refuse(c, 403, `the proofs do not recover ${registration.address} on ${origin}`);
 				}
 
-				await storage.recordSubscription(verified.address, registration.domain, registration.subscription);
+				await storage.recordSubscription(verified.address, origin, registration.subscription);
 				return c.json({success: true, registered: true});
 			},
 		)
@@ -159,14 +179,14 @@ export function getAPI(options: ServerOptions) {
 			const storage = config.storage;
 
 			const address = c.req.param('address').toLowerCase();
-			const domain = c.req.param('domain');
+			const domain = appOrigin(c.req.param('domain'));
 			const subscriptionID = c.req.param('subscriptionID');
 
 			const subscription = await storage.getSubscription(address, domain, subscriptionID);
 			return c.json({success: true, registered: !!subscription});
 		})
 		.get('/registered/:address/:domain', async (c) => {
-			const domain = c.req.param('domain');
+			const domain = appOrigin(c.req.param('domain'));
 			const refused = await authorize(c, domain);
 			if (refused) {
 				return refused;
@@ -179,11 +199,12 @@ export function getAPI(options: ServerOptions) {
 			const config = c.get('config');
 			const storage = config.storage;
 			const push = c.req.valid('json');
-			const refused = await authorize(c, push.domain);
+			const refused = await authorize(c, appOrigin(push.domain));
 			if (refused) {
 				return refused;
 			}
 			const address = push.address.toLowerCase();
+			const domain = appOrigin(push.domain);
 			const key = c.req.header('Idempotency-Key');
 			if (key !== undefined && (key.length === 0 || key.length > MAX_IDEMPOTENCY_KEY_LENGTH)) {
 				return refuse(c, 400, `an Idempotency-Key has 1 to ${MAX_IDEMPOTENCY_KEY_LENGTH} characters`);
@@ -203,7 +224,7 @@ export function getAPI(options: ServerOptions) {
 				removed: 0,
 			};
 			const payload = JSON.stringify(push.message);
-			const subscriptions = await storage.getSubscriptions(address, push.domain);
+			const subscriptions = await storage.getSubscriptions(address, domain);
 			for (const subscription of subscriptions) {
 				const subscriptionID = subscription.endpoint;
 				if (isExpired(subscription, now)) {
@@ -212,14 +233,7 @@ export function getAPI(options: ServerOptions) {
 					continue;
 				}
 				if (key) {
-					const claim = await storage.claimDelivery(
-						address,
-						push.domain,
-						key,
-						subscriptionID,
-						now,
-						now - CLAIM_TIMEOUT_MS,
-					);
+					const claim = await storage.claimDelivery(address, domain, key, subscriptionID, now, now - CLAIM_TIMEOUT_MS);
 					if (claim === 'delivered') {
 						result.alreadyDelivered++;
 						continue;
@@ -234,12 +248,12 @@ export function getAPI(options: ServerOptions) {
 				if (sent.ok) {
 					result.delivered++;
 					if (key) {
-						await storage.markDelivered(address, push.domain, key, subscriptionID);
+						await storage.markDelivered(address, domain, key, subscriptionID);
 					}
 					continue;
 				}
 				if (key) {
-					await storage.releaseDelivery(address, push.domain, key, subscriptionID);
+					await storage.releaseDelivery(address, domain, key, subscriptionID);
 				}
 				if (sent.status === 410 || sent.status === 404) {
 					// the push service no longer knows the subscription
