@@ -15,7 +15,7 @@ pnpm -r format:check && pnpm build && pnpm test
 ## Tests
 
 - The API's behaviour is ONE suite, `packages/server/test/api-suite.ts`, run by every platform through `app.request` on an in-memory libSQL database with a recording push sender. A new route or rule is a case there, so every platform is held to it. Its protocol helpers (`test/protocol.ts`) are written from the wire format, not from the server's code: keep it that way.
-- No test opens a port or reaches the network. `platforms/cf-worker`'s workerd test is not in the gate (it is red; see `work/notes/observations/`).
+- No test opens a port or reaches the network. `platforms/cf-worker` has no test (a workerd pool would open one): `pnpm build` type-checks it.
 - The example (`examples/svelte`) is checked with `pnpm --filter push-notification-example-svelte check`; its `test` script runs Playwright and is not in the gate.
 
 ## Changes that touch the wire

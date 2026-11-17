@@ -29,7 +29,7 @@
     "example:svelte:dev": "pnpm --filter push-notification-example-svelte dev",
     "---------------------- DEPLOY ----------------------": "",
     "build": "ldenv pnpm run -r build",
-    "deploy:cf": "pnpm run --filter push-notification-cf-worker deploy",
+    "deploy:cf": "pnpm --filter push-notification-service-server-cf-worker deploy:production",
     "---------------------- RUN FULL LOCAL SETUP ----------------------": "",
     "stop": "zellij kill-session $npm_package_name",
     "start": "zellij-launcher --layout zellij.kdl a $npm_package_name || zellij --layout zellij.kdl -s $npm_package_name"
