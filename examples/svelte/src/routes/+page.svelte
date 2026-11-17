@@ -6,14 +6,6 @@
 		pushNotifications,
 		serviceWorker
 	} from '$lib/state';
-
-	function subscribe() {
-		pushNotifications.subscribeToPush();
-	}
-
-	function registerOnServer() {
-		pushNotifications.registerOnServer();
-	}
 </script>
 
 {$fakeOwnerAccount?.address} / {$privateAccount?.signer?.address}
@@ -36,24 +28,24 @@
 {JSON.stringify($pushNotifications, (k, v) => (k === 'subscription' ? !!v : v), 2)}
 <hr />
 
-{#if $pushNotifications.settled}
-	{#if $pushNotifications.error}
-		{$pushNotifications.error}
-		<button class="btn" onclick={() => pushNotifications.acknowledgeError()}>ok</button>
-	{:else if 'subscription' in $pushNotifications}
-		<button
-			class="btn"
-			disabled={!!$pushNotifications.subscription || $pushNotifications.subscribing}
-			onclick={subscribe}>subscribe</button
-		>
-
-		{#if $pushNotifications.subscription && !$pushNotifications.registeredOnServer}
-			<button class="btn" onclick={registerOnServer}>link account</button>
-		{/if}
-	{:else if $pushNotifications.denied}
-		Push notifications were denied.
-	{/if}
-{:else if $pushNotifications.loading}
+{#if $pushNotifications.error}
+	{String($pushNotifications.error)}
+	<button class="btn" onclick={() => pushNotifications.acknowledgeError()}>ok</button>
+{/if}
+{#if $pushNotifications.status === 'off' || $pushNotifications.status === 'unregistered'}
+	<button class="btn" disabled={$pushNotifications.busy} onclick={() => pushNotifications.enable()}
+		>enable notifications</button
+	>
+{:else if $pushNotifications.status === 'on'}
+	Notifications are on for this account.
+	<button class="btn" disabled={$pushNotifications.busy} onclick={() => pushNotifications.disable()}
+		>disable</button
+	>
+{:else if $pushNotifications.status === 'denied'}
+	Push notifications were denied.
+{:else if $pushNotifications.status === 'unsupported'}
+	This browser cannot receive push notifications.
+{:else if $pushNotifications.status === 'loading'}
 	please wait...
 {:else}
 	No account

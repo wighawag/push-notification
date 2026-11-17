@@ -4,7 +4,7 @@ The domain glossary for `push-notification-server`. Agents and skills use THIS v
 
 ## What push-notification-server is
 
-A Web Push relay keyed by ACCOUNT rather than by device: an app registers a browser's push subscription for an Ethereum account on a domain, and a service holding that domain's token sends a notification to the account, reaching every device the account registered. The calling service stores no push data at all. It ships as a pnpm/TypeScript monorepo: the server (`packages/server`, a Hono app over remote-sql), platforms that host it (`platforms/nodejs` on libSQL, `platforms/cf-worker` on D1), and an example client (`examples/svelte`).
+A Web Push relay keyed by ACCOUNT rather than by device: an app registers a browser's push subscription for an Ethereum account on a domain, and a service holding that domain's token sends a notification to the account, reaching every device the account registered. The calling service stores no push data at all. It ships as a pnpm/TypeScript monorepo: the server (`packages/server`, a Hono app over remote-sql), platforms that host it (`platforms/nodejs` on libSQL, `platforms/cf-worker` on D1), the browser client (`packages/subscription-client`, a Svelte-compatible store of the account's push status with `enable` / `disable`), and an example app (`examples/svelte`).
 
 ## Core domain terms
 

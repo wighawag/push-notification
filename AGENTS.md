@@ -10,7 +10,7 @@ A change is green when this passes (the `verify` of `dorfl.json`), after `pnpm i
 pnpm -r format:check && pnpm build && pnpm test
 ```
 
-`format:check` is per package (`pnpm -r`), since the root has no prettier. To fix formatting, run `pnpm --filter <package> format:write` rather than hand-fixing a check's output. `pnpm build` generates the SQL modules and compiles every package (the server's `dist` is what the platforms import, so build before testing a platform). `pnpm test` runs the two port-free suites: `packages/server` and `platforms/nodejs`.
+`format:check` is per package (`pnpm -r`), since the root has no prettier. To fix formatting, run `pnpm --filter <package> format:write` rather than hand-fixing a check's output. `pnpm build` generates the SQL modules and compiles every package (the server's `dist` is what the platforms import, so build before testing a platform). `pnpm test` runs the port-free suites: `packages/server`, `platforms/nodejs`, and `packages/subscription-client` (the client against the server in process).
 
 ## Tests
 

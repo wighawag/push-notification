@@ -1,7 +1,7 @@
 {
   "name": "push-notification-subscription-client",
   "version": "0.0.0",
-  "description": "web client for subscribing to push-notification-service-server",
+  "description": "the browser side of push-notification-service-server: a Svelte-compatible store of whether an account receives push on this device, and enable / disable",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -18,21 +18,25 @@
     "src"
   ],
   "dependencies": {
-    "ldenv": "^0.3.12",
-    "named-logs": "^0.3.2",
-    "viem": "^2.23.5"
+    "missiv-identity": "link:../../../../../missiv/tf-S1/main/packages/identity",
+    "sveltore": "^1.0.0"
   },
   "devDependencies": {
+    "@libsql/client": "^0.15.15",
+    "@noble/secp256k1": "^2.3.0",
     "as-soon": "^0.0.11",
     "prettier": "^3.5.2",
-    "tsx": "^4.19.3",
-    "typescript": "^5.6.3"
+    "push-notification-service-server": "workspace:*",
+    "remote-sql-libsql": "^0.0.6",
+    "typescript": "^5.6.3",
+    "viem": "^2.23.5",
+    "vitest": "^3.0.7"
   },
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "dev": "as-soon -w src pnpm build",
     "format:check": "prettier --check .",
     "format:write": "prettier --write .",
-    "tsx": "tsx"
+    "test": "vitest"
   }
 }

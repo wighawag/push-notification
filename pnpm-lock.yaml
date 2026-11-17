@@ -35,15 +35,15 @@ importers:
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
-      missiv-identity:
-        specifier: link:../../../../../missiv/tf-S1/main/packages/identity
-        version: link:../../../../../missiv/tf-S1/main/packages/identity
       named-logs:
         specifier: ^0.3.2
         version: 0.3.2
       perfect-debounce:
         specifier: ^1.0.0
         version: 1.0.0
+      push-notification-subscription-client:
+        specifier: workspace:*
+        version: link:../../packages/subscription-client
     devDependencies:
       '@playwright/test':
         specifier: ^1.49.1
@@ -172,28 +172,40 @@ importers:
 
   packages/subscription-client:
     dependencies:
-      ldenv:
-        specifier: ^0.3.12
-        version: 0.3.12
-      named-logs:
-        specifier: ^0.3.2
-        version: 0.3.2
-      viem:
-        specifier: ^2.23.5
-        version: 2.23.5(typescript@5.7.3)(zod@3.24.2)
+      missiv-identity:
+        specifier: link:../../../../../missiv/tf-S1/main/packages/identity
+        version: link:../../../../../missiv/tf-S1/main/packages/identity
+      sveltore:
+        specifier: ^1.0.0
+        version: 1.0.0
     devDependencies:
+      '@libsql/client':
+        specifier: ^0.15.15
+        version: 0.15.15
+      '@noble/secp256k1':
+        specifier: ^2.3.0
+        version: 2.3.0
       as-soon:
         specifier: ^0.0.11
         version: 0.0.11
       prettier:
         specifier: ^3.5.2
         version: 3.5.2
-      tsx:
-        specifier: ^4.19.3
-        version: 4.19.3
+      push-notification-service-server:
+        specifier: workspace:*
+        version: link:../server
+      remote-sql-libsql:
+        specifier: ^0.0.6
+        version: 0.0.6(@libsql/core@0.14.0)
       typescript:
         specifier: ^5.6.3
         version: 5.7.3
+      viem:
+        specifier: ^2.23.5
+        version: 2.23.5(typescript@5.7.3)(zod@3.24.2)
+      vitest:
+        specifier: ^3.0.7
+        version: 3.0.7(@types/node@22.13.5)(jiti@2.4.2)(lightningcss@1.29.1)(supports-color@7.2.0)(tsx@4.19.3)
 
   platforms/cf-worker:
     dependencies:
@@ -3586,6 +3598,10 @@ packages:
     resolution: {integrity: sha512-2Mo/AfObaw9zuD0u1JJ7sOVzRCGcpETEyDkLbtkcctWpCMCIyT0iz83xD8JT29SR7O4SgswuPRIDYReYF/607A==}
     engines: {node: '>=18'}
 
+  sveltore@1.0.0:
+    resolution: {integrity: sha512-e+A+Yv/mMl8d/ZjkMQ0J88PYgJEFKyDrFxLYjS4dbnrbmIfUdrVQWgGfTGfO07uFm6BQEq088YsvIpnfiWIi4w==}
+    engines: {node: '>=18'}
+
   syncpack@13.0.2:
     resolution: {integrity: sha512-ubpkqeIep5hvGM3yDb795xF9O4plCZ3+TrMZJ7AkuGd/WDam/BX7WRkOKl07tHkMVUfIo+2u4SIv5t+PKUrJdg==}
     engines: {node: '>=18.18.0'}
@@ -5704,6 +5720,7 @@ snapshots:
   get-tsconfig@4.10.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
+    optional: true
 
   glob-parent@5.1.2:
     dependencies:
@@ -6702,7 +6719,8 @@ snapshots:
       http-errors: 1.6.3
       path-is-absolute: 1.0.1
 
-  resolve-pkg-maps@1.0.0: {}
+  resolve-pkg-maps@1.0.0:
+    optional: true
 
   resolve@1.22.10:
     dependencies:
@@ -7052,6 +7070,8 @@ snapshots:
       magic-string: 0.30.17
       zimmerframe: 1.1.2
 
+  sveltore@1.0.0: {}
+
   syncpack@13.0.2(typescript@5.7.3):
     dependencies:
       '@effect/schema': 0.75.5(effect@3.12.7)
@@ -7143,6 +7163,7 @@ snapshots:
       get-tsconfig: 4.10.0
     optionalDependencies:
       fsevents: 2.3.3
+    optional: true
 
   type-fest@0.21.3: {}
 

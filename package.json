@@ -19,7 +19,7 @@
     "format": "prettier --write . && pnpm -r format",
     "format:check": "prettier --check . && pnpm -r format:check",
     "---------------------- TEST ----------------------": "",
-    "test": "pnpm --filter push-notification-service-server --filter push-notification-service-server-nodejs test run",
+    "test": "pnpm --filter push-notification-service-server --filter push-notification-service-server-nodejs --filter push-notification-subscription-client test run",
     "---------------------- DEV ----------------------": "",
     "cf-worker:dev": "pnpm --filter push-notification-service-server-cf-worker dev",
     "nodejs:dev": "pnpm --filter push-notification-service-server-nodejs dev",
