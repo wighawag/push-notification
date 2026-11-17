@@ -101,6 +101,13 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 				expect(response.status).toBe(403);
 			});
 
+			it('refuses a malformed request signature', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const init = await registration(alice, newSubscription());
+				(init.headers as Record<string, string>).SIGNATURE = 'not-a-signature';
+				expect((await request('/api/register', init)).status).toBe(400);
+			});
+
 			it('refuses a body changed after it was signed', async () => {
 				const alice = await createIdentity(DOMAIN_A);
 				const response = await request(
@@ -221,6 +228,30 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 				expect(await retry.json()).toMatchObject({success: true, delivered: 1, alreadyDelivered: 1});
 				expect(sender.deliveredTo(phone.endpoint)).toBe(1);
 				expect(sender.deliveredTo(laptop.endpoint)).toBe(1);
+			});
+
+			it('while another request with the same key is still sending, answers 409 and sends nothing', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const phone = await register(alice);
+				const release = sender.hold(phone.endpoint);
+				const body = {address: alice.address, domain: DOMAIN_A, message};
+				const first = push(body, {idempotencyKey: 'slow'});
+				// let the first request claim the delivery and reach the held send
+				await new Promise((resolve) => setTimeout(resolve, 50));
+				const concurrent = await push(body, {idempotencyKey: 'slow'});
+				expect(concurrent.status).toBe(409);
+				expect(await concurrent.json()).toMatchObject({success: false, inFlight: 1, delivered: 0});
+				release();
+				expect((await first).status).toBe(200);
+				expect(sender.deliveredTo(phone.endpoint)).toBe(1);
+			});
+
+			it('refuses an overlong key', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				await register(alice);
+				const body = {address: alice.address, domain: DOMAIN_A, message};
+				expect((await push(body, {idempotencyKey: 'x'.repeat(257)})).status).toBe(400);
+				expect(sender.sent).toHaveLength(0);
 			});
 
 			it('another key delivers again, and a key is scoped to its address', async () => {

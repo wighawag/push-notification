@@ -7,14 +7,30 @@ import {Env} from './env.js';
 import {getDummyAPI} from './api/dummy.js';
 import {logs} from 'named-logs';
 import {getAPI} from './api/index.js';
+import {RemoteSQL} from 'remote-sql';
+import {RemoteSQLStorage} from './storage/RemoteSQLStorage.js';
 
 const logger = logs('push-notification-service-server');
 
 export type {Env};
+export type {ServerOptions, PushSender, PushSendResult, Subscription} from './types.js';
+export type {Push, SubscriptionRegistration, DeclarativePushNotification, PushResult} from './api/index.js';
+
+/** Creates the tables if they are not there (idempotent): what a platform runs before serving. */
+export async function setupDatabase(db: RemoteSQL): Promise<void> {
+	await new RemoteSQLStorage(db).setup();
+}
 
 const corsSetup = cors({
 	origin: '*',
-	allowHeaders: ['X-Custom-Header', 'Upgrade-Insecure-Requests', 'Content-Type', 'SIGNATURE'],
+	allowHeaders: [
+		'X-Custom-Header',
+		'Upgrade-Insecure-Requests',
+		'Content-Type',
+		'SIGNATURE',
+		'Authorization',
+		'Idempotency-Key',
+	],
 	allowMethods: ['POST', 'GET', 'HEAD', 'OPTIONS'],
 	exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
 	maxAge: 600,

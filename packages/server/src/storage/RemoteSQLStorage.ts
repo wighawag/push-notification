@@ -1,4 +1,4 @@
-import {Storage} from './index.js';
+import {DeliveryClaim, Storage} from './index.js';
 import {RemoteSQL} from 'remote-sql';
 import setupDB from '../schema/ts/db.sql.js';
 import {sqlToStatements} from './utils.js';
@@ -18,8 +18,10 @@ export class RemoteSQLStorage implements Storage {
 	constructor(private db: RemoteSQL) {}
 
 	async recordSubscription(address: string, domain: string, subscription: Subscription): Promise<void> {
-		const sqlStatement = `INSERT INTO Subscriptions (address, domain, subscriptionID, subscription, timestamp, expiry) 
-		 VALUES(?1, ?2, ?3, ?4, UNIXEPOCH(), ?5);`;
+		const sqlStatement = `INSERT INTO Subscriptions (address, domain, subscriptionID, subscription, timestamp, expiry)
+		 VALUES(?1, ?2, ?3, ?4, UNIXEPOCH(), ?5)
+		 ON CONFLICT (address, domain, subscriptionID) DO UPDATE SET
+		 subscription = excluded.subscription, timestamp = excluded.timestamp, expiry = excluded.expiry;`;
 		const statement = this.db.prepare(sqlStatement);
 		await statement
 			.bind(
@@ -49,12 +51,63 @@ export class RemoteSQLStorage implements Storage {
 		const statement = this.db.prepare(
 			`SELECT * FROM Subscriptions WHERE address = ?1 AND domain = ?2 AND subscriptionID = ?3;`,
 		);
-		console.log(subscriptionID);
 		const {results} = await statement.bind(address, domain, subscriptionID).all<SubscriptionInDB>();
 		if (results.length === 0) {
 			return undefined;
 		}
 		return JSON.parse(results[0].subscription);
+	}
+
+	async countLiveSubscriptions(address: string, domain: string, nowMS: number): Promise<number> {
+		const statement = this.db.prepare(
+			`SELECT COUNT(*) AS count FROM Subscriptions WHERE address = ?1 AND domain = ?2 AND (expiry IS NULL OR expiry > ?3);`,
+		);
+		const {results} = await statement.bind(address, domain, Math.floor(nowMS / 1000)).all<{count: number}>();
+		return Number(results[0]?.count ?? 0);
+	}
+
+	async claimDelivery(
+		address: string,
+		domain: string,
+		key: string,
+		subscriptionID: string,
+		nowMS: number,
+		staleBeforeMS: number,
+	): Promise<DeliveryClaim> {
+		const claim = this.db.prepare(
+			`INSERT INTO Deliveries (address, domain, idempotencyKey, subscriptionID, delivered, claimedAt)
+			 VALUES (?1, ?2, ?3, ?4, 0, ?5)
+			 ON CONFLICT (address, domain, idempotencyKey, subscriptionID) DO UPDATE SET claimedAt = excluded.claimedAt
+			 WHERE Deliveries.delivered = 0 AND Deliveries.claimedAt < ?6
+			 RETURNING delivered;`,
+		);
+		const {results} = await claim.bind(address, domain, key, subscriptionID, nowMS, staleBeforeMS).all();
+		if (results.length > 0) {
+			return 'claimed';
+		}
+		const existing = this.db.prepare(
+			`SELECT delivered FROM Deliveries WHERE address = ?1 AND domain = ?2 AND idempotencyKey = ?3 AND subscriptionID = ?4;`,
+		);
+		const found = await existing.bind(address, domain, key, subscriptionID).all<{delivered: number}>();
+		return Number(found.results[0]?.delivered) === 1 ? 'delivered' : 'in-flight';
+	}
+
+	async markDelivered(address: string, domain: string, key: string, subscriptionID: string): Promise<void> {
+		const statement = this.db.prepare(
+			`UPDATE Deliveries SET delivered = 1 WHERE address = ?1 AND domain = ?2 AND idempotencyKey = ?3 AND subscriptionID = ?4;`,
+		);
+		await statement.bind(address, domain, key, subscriptionID).all();
+	}
+
+	async releaseDelivery(address: string, domain: string, key: string, subscriptionID: string): Promise<void> {
+		const statement = this.db.prepare(
+			`DELETE FROM Deliveries WHERE address = ?1 AND domain = ?2 AND idempotencyKey = ?3 AND subscriptionID = ?4 AND delivered = 0;`,
+		);
+		await statement.bind(address, domain, key, subscriptionID).all();
+	}
+
+	async pruneDeliveries(beforeMS: number): Promise<void> {
+		await this.db.prepare(`DELETE FROM Deliveries WHERE claimedAt < ?1;`).bind(beforeMS).all();
 	}
 
 	async setup() {

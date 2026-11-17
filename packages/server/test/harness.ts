@@ -55,11 +55,17 @@ export type RecordedPush = {
 export function recordingSender() {
 	const sent: RecordedPush[] = [];
 	const scripted = new Map<string, number[]>();
+	const held = new Map<string, Promise<void>>();
 	async function send(
 		subscription: {endpoint: string},
 		payload: string,
 		options: {topic?: string; urgency?: string},
 	): Promise<{ok: boolean; status: number; body?: string}> {
+		const hold = held.get(subscription.endpoint);
+		if (hold) {
+			held.delete(subscription.endpoint);
+			await hold;
+		}
 		const queue = scripted.get(subscription.endpoint);
 		const status = queue && queue.length > 0 ? queue.shift()! : 201;
 		if (status >= 200 && status < 300) {
@@ -73,6 +79,12 @@ export function recordingSender() {
 		/** The next sends to this endpoint answer these statuses, in order, then 201. */
 		answer(endpoint: string, ...statuses: number[]) {
 			scripted.set(endpoint, [...(scripted.get(endpoint) ?? []), ...statuses]);
+		},
+		/** The next send to this endpoint waits until the returned function is called. */
+		hold(endpoint: string): () => void {
+			let release!: () => void;
+			held.set(endpoint, new Promise<void>((resolve) => (release = resolve)));
+			return release;
 		},
 		deliveredTo(endpoint: string) {
 			return sent.filter((s) => s.endpoint === endpoint).length;
