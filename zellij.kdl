@@ -21,8 +21,11 @@ layout {
 		}
 	}
 	pane split_direction="vertical" {
-		pane command="bash"  {
-			args "-c" "pnpm cf-worker:dev; cd platforms/cf-worker; ${SHELL-bash}"
+		pane name="nodejs build watch" command="bash"  {
+			args "-c" "pnpm nodejs:build:watch; cd platforms/nodejs; ${SHELL-bash}"
+		}
+		pane name="nodejs server" command="bash"  {
+			args "-c" "pnpm --filter push-notification-service-server-nodejs build && pnpm nodejs:dev; cd platforms/nodejs; ${SHELL-bash}"
 		}
 	}
 

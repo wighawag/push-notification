@@ -1,0 +1,45 @@
+{
+  "name": "push-notification-service-server-nodejs",
+  "version": "0.0.3",
+  "description": "push-notification-service-server as a Node.js process on libSQL",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": {
+    "push-notification-service-server-nodejs": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    ".env.default"
+  ],
+  "dependencies": {
+    "@hono/node-server": "^1.13.8",
+    "@libsql/client": "^0.15.15",
+    "ldenv": "^0.3.12",
+    "push-notification-service-server": "workspace:*",
+    "remote-sql-libsql": "^0.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "prettier": "^3.5.2",
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.7"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch --preserveWatchOutput",
+    "dev": "node --watch dist/cli.js",
+    "start": "node dist/cli.js",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "test": "vitest"
+  }
+}

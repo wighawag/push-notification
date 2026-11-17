@@ -14,7 +14,7 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 
 		beforeEach(async () => {
 			sender = recordingSender();
-			const app = await makeApp({db: await freshDatabase(), env: await testEnv(), sender: sender.send});
+			const app = await makeApp({...(await freshDatabase()), env: await testEnv(), sender: sender.send});
 			request = app.request;
 		});
 

@@ -238,6 +238,37 @@ importers:
         specifier: ^3.110.0
         version: 3.110.0(@cloudflare/workers-types@4.20250224.0)
 
+  platforms/nodejs:
+    dependencies:
+      '@hono/node-server':
+        specifier: ^1.13.8
+        version: 1.19.19(hono@4.7.2)
+      '@libsql/client':
+        specifier: ^0.15.15
+        version: 0.15.15
+      ldenv:
+        specifier: ^0.3.12
+        version: 0.3.12
+      push-notification-service-server:
+        specifier: workspace:*
+        version: link:../../packages/server
+      remote-sql-libsql:
+        specifier: ^0.0.6
+        version: 0.0.6(@libsql/core@0.14.0)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.13.5
+        version: 22.13.5
+      prettier:
+        specifier: ^3.5.2
+        version: 3.5.2
+      typescript:
+        specifier: ^5.6.3
+        version: 5.7.3
+      vitest:
+        specifier: ^3.0.7
+        version: 3.0.7(@types/node@22.13.5)(jiti@2.4.2)(lightningcss@1.29.1)(supports-color@7.2.0)(tsx@4.19.3)
+
 packages:
 
   '@adraffy/ens-normalize@1.11.0':
@@ -827,6 +858,12 @@ packages:
 
   '@hapi/bourne@3.0.0':
     resolution: {integrity: sha512-Waj1cwPXJDucOib4a3bAISsKJVb15MKi9IvmTI/7ssVEm6sywXGjVJDhl6/umt1pK1ZS7PacXU3A1PmFKHEZ2w==}
+
+  '@hono/node-server@1.19.19':
+    resolution: {integrity: sha512-Fy9R7PACOzHU9LDpfnuzVyuVYevKQRcEG2mZhmfc+DRdmayEd3RVfa2XOt2IgGcPNgA77Yk63KBszepcMFK5Ng==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
 
   '@hono/swagger-ui@0.5.0':
     resolution: {integrity: sha512-MWYYSv9kC8IwFBLZdwgZZMT9zUq2C/4/ekuyEYOkHEgUMqu+FG3eebtBZ4ofMh60xYRxRR2BgQGoNIILys/PFg==}
@@ -4396,6 +4433,10 @@ snapshots:
   '@fastify/busboy@2.1.1': {}
 
   '@hapi/bourne@3.0.0': {}
+
+  '@hono/node-server@1.19.19(hono@4.7.2)':
+    dependencies:
+      hono: 4.7.2
 
   '@hono/swagger-ui@0.5.0(hono@4.7.2)':
     dependencies:

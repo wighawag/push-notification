@@ -2,7 +2,7 @@
 // an env with domain tokens, and a RECORDING push sender in place of Web Push.
 import fs from 'node:fs';
 import path from 'node:path';
-import {createClient} from '@libsql/client';
+import {createClient, type Client} from '@libsql/client';
 import {RemoteLibSQL} from 'remote-sql-libsql';
 import type {RemoteSQL} from 'remote-sql';
 
@@ -27,8 +27,9 @@ export async function testEnv(): Promise<Record<string, string>> {
 const schemaFolder = path.join(import.meta.dirname, '../src/schema/sql');
 
 /** A fresh in-memory libSQL database holding the shipped schema (every .sql but drop.sql). */
-export async function freshDatabase(): Promise<RemoteSQL> {
-	const db = new RemoteLibSQL(createClient({url: ':memory:'}));
+export async function freshDatabase(): Promise<{db: RemoteSQL; libsql: Client}> {
+	const libsql = createClient({url: ':memory:'});
+	const db = new RemoteLibSQL(libsql);
 	const files = fs
 		.readdirSync(schemaFolder)
 		.filter((f) => f.endsWith('.sql') && f !== 'drop.sql')
@@ -41,7 +42,7 @@ export async function freshDatabase(): Promise<RemoteSQL> {
 			}
 		}
 	}
-	return db;
+	return {db, libsql};
 }
 
 export type RecordedPush = {
@@ -96,7 +97,9 @@ export type RecordingSender = ReturnType<typeof recordingSender>;
 
 /** What a platform gives the suite: a request function over an app built on these dependencies. */
 export type MakeApp = (deps: {
+	/** the database, schema applied, as remote-sql and as the libSQL client under it */
 	db: RemoteSQL;
+	libsql: Client;
 	env: Record<string, string>;
 	sender: RecordingSender['send'];
 }) => Promise<{request: (path: string, init?: RequestInit) => Promise<Response>}>;
