@@ -1,4 +1,4 @@
-import {Context, Hono} from 'hono';
+import {Context, Hono, MiddlewareHandler} from 'hono';
 import {ServerOptions, Subscription} from '../types.js';
 import {setup} from '../setup.js';
 import {Env} from '../env.js';
@@ -34,6 +34,18 @@ export type SubscriptionRegistration = {
 	address: string;
 	domain: string;
 	subscription: Subscription;
+	ownershipSignature: `0x${string}`;
+};
+
+/**
+ * POST /unregister's body, signed as /register is: removes the subscription
+ * (its endpoint) registered for `address` in the app, so a device stops
+ * receiving the account's notifications (a logout, an account switch).
+ */
+export type SubscriptionRemoval = {
+	address: string;
+	domain: string;
+	endpoint: string;
 	ownershipSignature: `0x${string}`;
 };
 
@@ -130,50 +142,71 @@ function isExpired(subscription: Subscription, nowMS: number) {
 	return !!subscription.expirationTime && subscription.expirationTime < nowMS;
 }
 
+/** The raw body, cached before the validator parses it: the request signature is over these bytes. */
+const cacheRawBody: MiddlewareHandler = async (c, next) => {
+	await c.req.text();
+	await next();
+};
+
+/**
+ * The two proofs of a signed request (see missiv-identity): the account it
+ * speaks for and the app origin, or the refusal to answer with: 401 without a
+ * signature or outside its minute, 400 malformed, 403 when the proofs do not
+ * recover `address` for this server, route, body and app.
+ */
+async function proveAccount(
+	c: Context<{Bindings: Env}>,
+	claim: {address: string; domain: string; ownershipSignature: `0x${string}`},
+): Promise<{address: string; origin: string} | Response> {
+	const requestSignature = c.req.header(REQUEST_SIGNATURE_HEADER);
+	if (!requestSignature) {
+		return refuse(c, 401, `the ${REQUEST_SIGNATURE_HEADER} header is required`);
+	}
+	const url = new URL(c.req.url);
+	const origin = appOrigin(claim.domain);
+	const verified = await verifyRequest({
+		serverOrigin: serverOrigin(c),
+		method: c.req.method,
+		path: url.pathname + url.search,
+		body: await c.req.text(),
+		signature: requestSignature,
+		appOrigin: origin,
+		address: claim.address,
+		ownershipSignature: claim.ownershipSignature,
+	});
+	if (!verified.ok) {
+		return verified.reason === 'malformed'
+			? refuse(c, 400, 'a signature is malformed')
+			: verified.reason === 'expired'
+				? refuse(c, 401, 'the request signature is outside its time window: sign it again')
+				: refuse(c, 403, `the proofs do not recover ${claim.address} on ${origin}`);
+	}
+	return {address: verified.address, origin};
+}
+
 export function getAPI(options: ServerOptions) {
 	const app = new Hono<{Bindings: Env}>()
 		.use(setup({serverOptions: options}))
-		.post(
-			'/register',
-			// the raw body, cached before the validator parses it: the request signature is over these bytes
-			async (c, next) => {
-				await c.req.text();
-				await next();
-			},
-			typiaValidator('json', createValidate<SubscriptionRegistration>()),
-			async (c) => {
-				const config = c.get('config');
-				const storage = config.storage;
-				const registration = c.req.valid('json');
-
-				const requestSignature = c.req.header(REQUEST_SIGNATURE_HEADER);
-				if (!requestSignature) {
-					return refuse(c, 401, `the ${REQUEST_SIGNATURE_HEADER} header is required`);
-				}
-				const url = new URL(c.req.url);
-				const origin = appOrigin(registration.domain);
-				const verified = await verifyRequest({
-					serverOrigin: serverOrigin(c),
-					method: c.req.method,
-					path: url.pathname + url.search,
-					body: await c.req.text(),
-					signature: requestSignature,
-					appOrigin: origin,
-					address: registration.address,
-					ownershipSignature: registration.ownershipSignature,
-				});
-				if (!verified.ok) {
-					return verified.reason === 'malformed'
-						? refuse(c, 400, 'a signature is malformed')
-						: verified.reason === 'expired'
-							? refuse(c, 401, 'the request signature is outside its time window: sign it again')
-							: refuse(c, 403, `the proofs do not recover ${registration.address} on ${origin}`);
-				}
-
-				await storage.recordSubscription(verified.address, origin, registration.subscription);
-				return c.json({success: true, registered: true});
-			},
-		)
+		.post('/register', cacheRawBody, typiaValidator('json', createValidate<SubscriptionRegistration>()), async (c) => {
+			const registration = c.req.valid('json');
+			const proven = await proveAccount(c, registration);
+			if (proven instanceof Response) {
+				return proven;
+			}
+			await c.get('config').storage.recordSubscription(proven.address, proven.origin, registration.subscription);
+			return c.json({success: true, registered: true});
+		})
+		.post('/unregister', cacheRawBody, typiaValidator('json', createValidate<SubscriptionRemoval>()), async (c) => {
+			const removal = c.req.valid('json');
+			const proven = await proveAccount(c, removal);
+			if (proven instanceof Response) {
+				return proven;
+			}
+			const storage = c.get('config').storage;
+			const existed = !!(await storage.getSubscription(proven.address, proven.origin, removal.endpoint));
+			await storage.removeSubscriptionOf(proven.address, proven.origin, removal.endpoint);
+			return c.json({success: true, unregistered: existed});
+		})
 		.get('/registered/:address/:domain/:subscriptionID', async (c) => {
 			const config = c.get('config');
 			const storage = config.storage;

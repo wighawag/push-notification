@@ -75,6 +75,25 @@ export function newSubscription(options?: {expirationTime?: number | null}): Sub
 	};
 }
 
+/** The body and headers of a POST /unregister, signed as a client signs it. */
+export async function removal(
+	identity: Identity,
+	endpoint: string,
+	options?: {signer?: Identity; address?: string},
+): Promise<RequestInit> {
+	const body = JSON.stringify({
+		address: options?.address ?? identity.address,
+		domain: identity.domain,
+		endpoint,
+		ownershipSignature: identity.ownershipSignature,
+	});
+	const signature = await signRequest(
+		{serverOrigin: SERVER_ORIGIN, method: 'POST', path: '/api/unregister', body, timestamp: Date.now()},
+		(options?.signer ?? identity).delegatePrivateKey,
+	);
+	return {method: 'POST', headers: {'content-type': 'application/json', SIGNATURE: signature}, body};
+}
+
 /** The body and headers of a POST /register, signed as a client signs it. */
 export async function registration(
 	identity: Identity,

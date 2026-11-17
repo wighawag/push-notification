@@ -1,7 +1,14 @@
 // The API's behaviour, as every platform must serve it. A platform's test calls
 // `describeAPI` with a function building its app; nothing here opens a port.
 import {beforeEach, describe, expect, it} from 'vitest';
-import {createIdentity, newSubscription, registration, type Identity, type SubscriptionJSON} from './protocol.js';
+import {
+	createIdentity,
+	newSubscription,
+	registration,
+	removal,
+	type Identity,
+	type SubscriptionJSON,
+} from './protocol.js';
 import {DOMAIN_A, DOMAIN_B, TOKEN_A, TOKEN_B, freshDatabase, recordingSender, testEnv} from './harness.js';
 import type {MakeApp, RecordingSender} from './harness.js';
 
@@ -150,6 +157,64 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 				const response = await push({address: alice.address.toLowerCase(), domain: DOMAIN_A, message});
 				expect(response.status).toBe(200);
 				expect(sender.sent).toHaveLength(1);
+			});
+		});
+
+		describe('POST /unregister: a device leaves an account', () => {
+			it("removes the account's subscription, and pushes no longer reach it", async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const phone = await register(alice);
+				const laptop = await register(alice);
+				const response = await request('/api/unregister', await removal(alice, phone.endpoint));
+				expect(response.status).toBe(200);
+				expect(await response.json()).toEqual({success: true, unregistered: true});
+				await push({address: alice.address, domain: DOMAIN_A, message});
+				expect(sender.deliveredTo(phone.endpoint)).toBe(0);
+				expect(sender.deliveredTo(laptop.endpoint)).toBe(1);
+			});
+
+			it('removes it for that account only: the same browser registered for another account keeps it', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const bob = await createIdentity(DOMAIN_A);
+				const shared = newSubscription();
+				await register(alice, shared);
+				await register(bob, shared);
+				await request('/api/unregister', await removal(alice, shared.endpoint));
+				await push({address: bob.address, domain: DOMAIN_A, message});
+				expect(sender.deliveredTo(shared.endpoint)).toBe(1);
+			});
+
+			it('answers unregistered: false for a subscription that was not there', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const response = await request('/api/unregister', await removal(alice, 'https://push.invalid/never'));
+				expect(await response.json()).toEqual({success: true, unregistered: false});
+			});
+
+			it("refuses to remove another account's subscription", async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const mallory = await createIdentity(DOMAIN_A);
+				const phone = await register(alice);
+				const response = await request(
+					'/api/unregister',
+					await removal(mallory, phone.endpoint, {address: alice.address}),
+				);
+				expect(response.status).toBe(403);
+				await push({address: alice.address, domain: DOMAIN_A, message});
+				expect(sender.deliveredTo(phone.endpoint)).toBe(1);
+			});
+
+			it('refuses a /register signature presented at /unregister', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const phone = await register(alice);
+				const signed = await registration(alice, phone);
+				const body = JSON.stringify({
+					address: alice.address,
+					domain: DOMAIN_A,
+					endpoint: phone.endpoint,
+					ownershipSignature: alice.ownershipSignature,
+				});
+				const response = await request('/api/unregister', {...signed, body});
+				expect(response.status).toBe(403);
 			});
 		});
 

@@ -7,6 +7,8 @@ export interface Storage {
 	/** Records the subscription for (address, domain), or refreshes it if already there. */
 	recordSubscription(address: string, domain: string, subscription: Subscription): Promise<void>;
 	getSubscriptions(address: string, domain: string): Promise<Subscription[]>;
+	/** Removes the subscription (its endpoint) for this address and domain only. */
+	removeSubscriptionOf(address: string, domain: string, subscriptionID: string): Promise<void>;
 	/** Removes the subscription (its endpoint) wherever it is registered. */
 	removeSubscription(subscriptionID: string): Promise<void>;
 	getSubscription(address: string, domain: string, subscriptionID: string): Promise<Subscription | undefined>;

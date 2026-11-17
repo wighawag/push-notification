@@ -47,6 +47,13 @@ export class RemoteSQLStorage implements Storage {
 		await statement.bind(subscriptionID).all<Subscription>();
 	}
 
+	async removeSubscriptionOf(address: string, domain: string, subscriptionID: string): Promise<void> {
+		const statement = this.db.prepare(
+			`DELETE FROM Subscriptions WHERE address = ?1 AND domain = ?2 AND subscriptionID = ?3;`,
+		);
+		await statement.bind(address, domain, subscriptionID).all();
+	}
+
 	async getSubscription(address: string, domain: string, subscriptionID: string): Promise<Subscription | undefined> {
 		const statement = this.db.prepare(
 			`SELECT * FROM Subscriptions WHERE address = ?1 AND domain = ?2 AND subscriptionID = ?3;`,

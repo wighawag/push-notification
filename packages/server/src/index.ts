@@ -14,7 +14,13 @@ const logger = logs('push-notification-service-server');
 
 export type {Env};
 export type {ServerOptions, PushSender, PushSendResult, Subscription} from './types.js';
-export type {Push, SubscriptionRegistration, DeclarativePushNotification, PushResult} from './api/index.js';
+export type {
+	Push,
+	SubscriptionRegistration,
+	SubscriptionRemoval,
+	DeclarativePushNotification,
+	PushResult,
+} from './api/index.js';
 
 /** Creates the tables if they are not there (idempotent): what a platform runs before serving. */
 export async function setupDatabase(db: RemoteSQL): Promise<void> {

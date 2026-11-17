@@ -11,6 +11,7 @@ Mounted under `/api`.
 | Route | Who calls it | What it needs |
 |---|---|---|
 | `POST /register` `{address, domain, subscription, ownershipSignature}` | the app, in the browser | the `SIGNATURE` header (the delegate key's signature over the request envelope: this server's origin, the route, a timestamp, the body) and `ownershipSignature` (the wallet's over missiv's publication message for the delegate key), both from [missiv-identity](https://github.com/wighawag/missiv/tree/main/packages/identity) |
+| `POST /unregister` `{address, domain, endpoint, ownershipSignature}` | the app, at logout or an account switch | signed as `/register`; removes that account's subscription only |
 | `GET /registered/:address/:domain/:subscriptionID` | the app, about its own subscription | nothing |
 | `POST /push` `{address, domain, message, topic?, urgency?}` | a service | `Authorization: Bearer <the domain's token>`; an `Idempotency-Key` when it retries |
 | `GET /registered/:address/:domain` | a service | the domain's token; answers `{registered, count}` |
