@@ -18,7 +18,7 @@
     "src"
   ],
   "dependencies": {
-    "missiv-identity": "link:../../../../../missiv/tf-S1/main/packages/identity",
+    "missiv-identity": "^0.2.0",
     "sveltore": "^1.0.0"
   },
   "devDependencies": {
