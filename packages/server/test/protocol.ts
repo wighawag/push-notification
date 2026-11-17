@@ -1,5 +1,5 @@
 // A client of the wire protocol, written from the protocol and NOT from the
-// server's code (nor missiv-identity's), so the tests pin what a caller sends:
+// server's code (nor delegated-identity's), so the tests pin what a caller sends:
 // the wallet's signature over missiv's publication message (the ownership
 // proof) and the delegate key's signature over the request envelope (the
 // SIGNATURE header: <timestamp>:<compact hex>:<recovery bit>).
@@ -49,7 +49,7 @@ export async function signRequest(
 	delegatePrivateKey: Uint8Array,
 ): Promise<string> {
 	const envelope = [
-		'missiv-identity request v1',
+		'delegated-identity request v1',
 		`origin: ${request.serverOrigin}`,
 		`route: ${request.method} ${request.path}`,
 		`timestamp: ${request.timestamp}`,

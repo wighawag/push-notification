@@ -6,7 +6,7 @@ blockedBy: []
 
 ## What to build
 
-The package was an empty stub, and every app copied the example's push module (jolly-roger's `core/service-worker/push-notifications` is such a copy). A client package an app imports: the account's push status on this device as a store, and the actions that change it, speaking `/register`, `/unregister` and `/registered` with missiv-identity's proofs.
+The package was an empty stub, and every app copied the example's push module (jolly-roger's `core/service-worker/push-notifications` is such a copy). A client package an app imports: the account's push status on this device as a store, and the actions that change it, speaking `/register`, `/unregister` and `/registered` with delegated-identity's proofs.
 
 ## Acceptance criteria
 

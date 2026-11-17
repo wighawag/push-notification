@@ -18,7 +18,7 @@
     "src"
   ],
   "dependencies": {
-    "missiv-identity": "^0.2.0",
+    "delegated-identity": "^0.1.0",
     "sveltore": "^1.0.0"
   },
   "devDependencies": {

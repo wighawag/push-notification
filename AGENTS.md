@@ -20,7 +20,7 @@ pnpm -r format:check && pnpm build && pnpm test
 
 ## Changes that touch the wire
 
-The routes are used by services outside this repo (the trigger service, jolly-roger's push layer, missiv). A change to a route's body, headers, status codes or answer is breaking: a changeset says so, and `CONTEXT.md` keeps the terms. The ownership proof and the request signature are missiv-identity's, in missiv's repo: change them THERE, never with a local copy.
+The routes are used by services outside this repo (the trigger service, jolly-roger's push layer, missiv). A change to a route's body, headers, status codes or answer is breaking: a changeset says so, and `CONTEXT.md` keeps the terms. The ownership proof and the request signature are delegated-identity's (github.com/wighawag/delegated-identity): change them THERE, never with a local copy.
 
 ## Running it
 

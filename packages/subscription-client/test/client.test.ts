@@ -148,7 +148,7 @@ describe('createPushNotifications, against the server in process', () => {
 	it("uses the account's ownershipSignature when it has one, and asks the wallet otherwise", async () => {
 		const alice = account();
 		const wallet = walletsByAddress.get(alice.address)!;
-		const {originPublicKeyPublicationMessage, delegatePublicKey} = await import('missiv-identity');
+		const {originPublicKeyPublicationMessage, delegatePublicKey} = await import('delegated-identity');
 		const ownershipSignature = await wallet.signMessage({
 			message: originPublicKeyPublicationMessage('https://game.example', delegatePublicKey(alice.delegatePrivateKey)),
 		});

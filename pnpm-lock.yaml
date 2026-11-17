@@ -111,12 +111,12 @@ importers:
       '@hono/typia-validator':
         specifier: ^0.1.0
         version: 0.1.0(hono@4.7.2)(typia@7.6.4(@samchon/openapi@2.5.3)(typescript@5.7.3))
+      delegated-identity:
+        specifier: ^0.1.0
+        version: 0.1.0(typescript@5.7.3)(zod@3.24.2)
       hono:
         specifier: ^4.7.2
         version: 4.7.2
-      missiv-identity:
-        specifier: ^0.2.0
-        version: 0.2.0(typescript@5.7.3)(zod@3.24.2)
       named-logs:
         specifier: ^0.3.2
         version: 0.3.2
@@ -172,9 +172,9 @@ importers:
 
   packages/subscription-client:
     dependencies:
-      missiv-identity:
-        specifier: ^0.2.0
-        version: 0.2.0(typescript@5.7.3)(zod@3.24.2)
+      delegated-identity:
+        specifier: ^0.1.0
+        version: 0.1.0(typescript@5.7.3)(zod@3.24.2)
       sveltore:
         specifier: ^1.0.0
         version: 1.0.0
@@ -2045,6 +2045,9 @@ packages:
   defu@6.1.4:
     resolution: {integrity: sha512-mEQCMmwJu317oSz8CwdIOdwf3xMif1ttiM8LTufzc3g6kR+9Pe236twL8j3IYT1F7GfRgGcW6MWxzZjLIkuHIg==}
 
+  delegated-identity@0.1.0:
+    resolution: {integrity: sha512-yK1pKE9oY+9mlZ2KAqQ8L7m0rngG9/j1UcTlHydhsKzOr/wldaVENFEHq5XG2dKRmVch1RUCxJqAKZCVg390ew==}
+
   delegates@1.0.0:
     resolution: {integrity: sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==}
 
@@ -2903,9 +2906,6 @@ packages:
 
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
-
-  missiv-identity@0.2.0:
-    resolution: {integrity: sha512-iKrRoc0saTAJwZ1yRp58jUoNTdBS25xIEfL/o+/MGeNhPpxd7zzI+PdvbBt7+vlARyF6hu9a4vFEPT9pEnS//Q==}
 
   mlly@1.7.4:
     resolution: {integrity: sha512-qmdSIPC4bDJXgZTCR7XosJiNKySV7O215tsPtDN9iEO/7q/76b/ijtgRu/+epFXSJhijtTCCGp3DWS549P3xKw==}
@@ -4637,7 +4637,7 @@ snapshots:
   '@libsql/isomorphic-ws@0.1.5':
     dependencies:
       '@types/ws': 8.18.2
-      ws: 8.18.0
+      ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -5467,6 +5467,18 @@ snapshots:
       clone: 1.0.4
 
   defu@6.1.4: {}
+
+  delegated-identity@0.1.0(typescript@5.7.3)(zod@3.24.2):
+    dependencies:
+      '@noble/hashes': 1.8.0
+      '@noble/secp256k1': 2.3.0
+      viem: 2.57.20(typescript@5.7.3)(zod@3.24.2)
+    transitivePeerDependencies:
+      - bufferutil
+      - mppx
+      - typescript
+      - utf-8-validate
+      - zod
 
   delegates@1.0.0: {}
 
@@ -6417,18 +6429,6 @@ snapshots:
       brace-expansion: 2.0.1
 
   minimist@1.2.8: {}
-
-  missiv-identity@0.2.0(typescript@5.7.3)(zod@3.24.2):
-    dependencies:
-      '@noble/hashes': 1.7.1
-      '@noble/secp256k1': 2.3.0
-      viem: 2.57.20(typescript@5.7.3)(zod@3.24.2)
-    transitivePeerDependencies:
-      - bufferutil
-      - mppx
-      - typescript
-      - utf-8-validate
-      - zod
 
   mlly@1.7.4:
     dependencies:

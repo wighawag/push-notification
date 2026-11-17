@@ -5,7 +5,7 @@ import {Env} from '../env.js';
 import {typiaValidator} from '@hono/typia-validator';
 import {createValidate} from 'typia';
 import {logs} from 'named-logs';
-import {fromDomainToOrigin, REQUEST_SIGNATURE_HEADER, verifyRequest} from 'missiv-identity';
+import {fromDomainToOrigin, REQUEST_SIGNATURE_HEADER, verifyRequest} from 'delegated-identity';
 import {Urgency} from '../web-push/types.js';
 import {authorizeDomain, bearerToken} from '../auth/tokens.js';
 
@@ -18,7 +18,7 @@ const DELIVERY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_IDEMPOTENCY_KEY_LENGTH = 256;
 
 /**
- * POST /register's body. The request carries two proofs (see missiv-identity):
+ * POST /register's body. The request carries two proofs (see delegated-identity):
  * the SIGNATURE header, the delegate key's signature over the request envelope
  * (this server's origin, `POST /api/register`, a timestamp, this raw body);
  * and `ownershipSignature`, the wallet's signature over the publication message
@@ -149,7 +149,7 @@ const cacheRawBody: MiddlewareHandler = async (c, next) => {
 };
 
 /**
- * The two proofs of a signed request (see missiv-identity): the account it
+ * The two proofs of a signed request (see delegated-identity): the account it
  * speaks for and the app origin, or the refusal to answer with: 401 without a
  * signature or outside its minute, 400 malformed, 403 when the proofs do not
  * recover `address` for this server, route, body and app.

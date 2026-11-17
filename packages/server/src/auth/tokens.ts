@@ -1,4 +1,4 @@
-import {fromDomainToOrigin} from 'missiv-identity';
+import {fromDomainToOrigin} from 'delegated-identity';
 
 // GAP-1: a push is made by a service holding a token for the push's domain.
 // The operator configures each token by its SHA-256 (env PUSH_TOKENS), so the

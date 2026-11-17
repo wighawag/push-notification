@@ -1,7 +1,7 @@
 // The browser side of @push-notification/server: a store of whether the
 // current account receives push notifications on this device, and the actions
 // that change it. It subscribes the service worker with the server's VAPID key,
-// registers the subscription for the account (both proofs, missiv-identity),
+// registers the subscription for the account (both proofs, delegated-identity),
 // and unregisters it.
 //
 // It is a Svelte-compatible store (sveltore), so a Svelte app reads it with `$`
@@ -14,7 +14,7 @@ import {
 	originPublicKeyPublicationMessage,
 	REQUEST_SIGNATURE_HEADER,
 	signRequest,
-} from 'missiv-identity';
+} from 'delegated-identity';
 
 /** The account notifications are addressed to, and the delegate key the app holds for it. */
 export type PushAccount =

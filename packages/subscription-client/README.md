@@ -19,6 +19,6 @@ await push.enable(); // subscribes this browser if needed and registers it for t
 await push.disable(); // unregisters it for the account; other accounts on this browser keep theirs
 ```
 
-`account.address` is the WALLET: notifications are addressed to it, from every device it enabled. `delegatePrivateKey` signs each request (missiv-identity's request envelope); `ownershipSignature` is the wallet's signature over missiv-identity's publication message for that key and the app's origin, asked once through `signOwnership` when the app does not already hold it.
+`account.address` is the WALLET: notifications are addressed to it, from every device it enabled. `delegatePrivateKey` signs each request (delegated-identity's request envelope); `ownershipSignature` is the wallet's signature over delegated-identity's publication message for that key and the app's origin, asked once through `signOwnership` when the app does not already hold it.
 
 Pushes are sent by a service holding the domain's token (`POST /api/push`), never by the page.

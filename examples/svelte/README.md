@@ -4,7 +4,7 @@ A SvelteKit page that subscribes a browser to push notifications from @push-noti
 
 ## How it registers
 
-`src/lib/state.ts` wires @push-notification/client (`createPushNotifications`): it subscribes the service worker with the server's VAPID public key, then calls `POST /api/register` with two proofs, both from missiv-identity (and `POST /api/unregister` to disable):
+`src/lib/state.ts` wires @push-notification/client (`createPushNotifications`): it subscribes the service worker with the server's VAPID public key, then calls `POST /api/register` with two proofs, both from delegated-identity (and `POST /api/unregister` to disable):
 
 - `ownershipSignature`: the wallet's signature over the publication message naming the delegate key for this domain's origin (`originPublicKeyPublicationMessage(fromDomainToOrigin(domain), delegatePublicKey(privateKey))`), one wallet prompt per registration;
 - the `SIGNATURE` header: the delegate key's signature over the request envelope, which names the server's origin, `POST /api/register`, a timestamp and the body (`signRequest`); the server refuses it after a minute.
