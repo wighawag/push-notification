@@ -20,6 +20,7 @@
     "format:check": "prettier --check . && pnpm -r format:check",
     "---------------------- TEST ----------------------": "",
     "test": "pnpm --filter @push-notification/server --filter @push-notification/cli --filter @push-notification/client test run",
+    "check:packed": "node scripts/check-packed-install.mjs",
     "---------------------- DEV ----------------------": "",
     "cf-worker:dev": "pnpm --filter @push-notification/cf-worker dev",
     "nodejs:dev": "pnpm --filter @push-notification/cli dev",
