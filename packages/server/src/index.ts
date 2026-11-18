@@ -20,6 +20,11 @@ export type {
 	SubscriptionRemoval,
 	DeclarativePushNotification,
 	PushResult,
+	RegistrationResult,
+	RemovalResult,
+	SubscriptionCheck,
+	RegisteredCount,
+	ErrorResult,
 } from './api/index.js';
 
 /** Creates the tables if they are not there (idempotent): what a platform runs before serving. */

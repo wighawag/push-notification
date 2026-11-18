@@ -388,5 +388,64 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 				expect(other.status).toBe(403);
 			});
 		});
+
+		describe('an invalid body is refused (400) before any proof or token is looked at', () => {
+			async function expectRefused(response: Response, ...paths: string[]) {
+				expect(response.status).toBe(400);
+				const body = (await response.json()) as {success: boolean; errors: {message: string}[]};
+				expect(body.success).toBe(false);
+				expect(body.errors).toHaveLength(paths.length);
+				for (const [i, path] of paths.entries()) {
+					expect(body.errors[i].message).toContain(` at ${path}:`);
+				}
+			}
+			const json = (body: unknown): RequestInit => ({
+				method: 'POST',
+				headers: {'content-type': 'application/json'},
+				body: JSON.stringify(body),
+			});
+
+			it('POST /register, naming each invalid field', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const init = await registration(alice, newSubscription());
+				const body = JSON.parse(init.body as string);
+				await expectRefused(
+					await request('/api/register', json({...body, subscription: {...body.subscription, keys: {}}})),
+					'subscription.keys.p256dh',
+					'subscription.keys.auth',
+				);
+				await expectRefused(
+					await request('/api/register', json({...body, ownershipSignature: 'no-0x-prefix'})),
+					'ownershipSignature',
+				);
+			});
+
+			it('POST /unregister', async () => {
+				await expectRefused(
+					await request('/api/unregister', json({address: '0x1', domain: DOMAIN_A, ownershipSignature: '0x1'})),
+					'endpoint',
+				);
+			});
+
+			it('POST /push, even without a token', async () => {
+				await expectRefused(
+					await push({address: '0x1', domain: DOMAIN_A, message, urgency: 'urgent'}, {token: null}),
+					'urgency',
+				);
+				await expectRefused(
+					await push({address: '0x1', domain: DOMAIN_A, message: {...message, web_push: 8031}}),
+					'message.web_push',
+				);
+				expect(sender.sent).toHaveLength(0);
+			});
+
+			it('POST /push forwards the message as sent, fields it does not know included', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				await register(alice);
+				const future = {...message, notification: {...message.notification, not_yet_listed: 1}, also_new: true};
+				expect((await push({address: alice.address, domain: DOMAIN_A, message: future})).status).toBe(200);
+				expect(JSON.parse(sender.sent[0].payload)).toEqual(future);
+			});
+		});
 	});
 }
