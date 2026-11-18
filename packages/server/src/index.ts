@@ -87,6 +87,8 @@ export function createServer(options: ServerOptions) {
 		});
 }
 
+export {generateOpenAPIDocument, type OpenAPIDocument} from './openapi.js';
+
 export type App = ReturnType<typeof createServer>;
 
 // this is a trick to calculate the type when compiling

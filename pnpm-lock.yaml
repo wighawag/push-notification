@@ -151,9 +151,6 @@ importers:
       as-soon:
         specifier: ^0.0.11
         version: 0.0.11
-      hono-typia-openapi:
-        specifier: ^0.2.0
-        version: 0.2.0(hono@4.13.19)(typescript@5.7.3)(typia@7.6.4(@samchon/openapi@2.5.3)(@types/node@22.13.5)(typescript@5.7.3))
       ldenv:
         specifier: ^0.3.12
         version: 0.3.12
@@ -2198,13 +2195,6 @@ packages:
     resolution: {integrity: sha512-KeJlG8IcpLk0jDFFbHUBrTs4v4fom1dCYpD5O3gPwJ1Sga63e6NOtT5Gmm0oVfNOLtwwHXcHBpk91MksLm0qZw==}
     peerDependencies:
       hono: ^4.11.2
-
-  hono-typia-openapi@0.2.0:
-    resolution: {integrity: sha512-G22HDdi5v4CV4mAio+umfsPaswB0UkI2m8fXDtur3IZmVeoz1nA/5Rq2Rv3vWGSxtcElzTFoy5TqvNp3MW1i3w==}
-    hasBin: true
-    peerDependencies:
-      hono: ^4.5.1D
-      typia: ^7.0.0
 
   hono@4.13.19:
     resolution: {integrity: sha512-KmXvQAXwcAHV+muzbIwoJ23niEB5nMoDVr9WcRkU8mvjUECm/1+7v4Jgp7P7a+H6MLFrh+vXrGonGrGS+RQfkA==}
@@ -5534,18 +5524,6 @@ snapshots:
       - zod
       - zod-openapi
       - zod-to-json-schema
-
-  hono-typia-openapi@0.2.0(hono@4.13.19)(typescript@5.7.3)(typia@7.6.4(@samchon/openapi@2.5.3)(@types/node@22.13.5)(typescript@5.7.3)):
-    dependencies:
-      cac: 6.7.14
-      consola: 3.4.2
-      cosmiconfig: 9.0.0(typescript@5.7.3)
-      hono: 4.13.19
-      semver: 7.7.1
-      typia: 7.6.4(@samchon/openapi@2.5.3)(@types/node@22.13.5)(typescript@5.7.3)
-      unplugin: 1.16.1
-    transitivePeerDependencies:
-      - typescript
 
   hono@4.13.19: {}
 
