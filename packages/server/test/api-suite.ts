@@ -439,6 +439,59 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 				expect(sender.sent).toHaveLength(0);
 			});
 
+			// what 0.1.0's validators accepted and refused, compared case by case on 79c6683:
+			// a refused body answers 400, an accepted one reaches the token check (401 without it)
+			const subscription = {endpoint: 'https://push.example/1', expirationTime: null, keys: {p256dh: 'a', auth: 'b'}};
+			const signed = {address: '0xabc', domain: DOMAIN_A, subscription, ownershipSignature: '0x12'};
+			const pushed = {address: '0xabc', domain: DOMAIN_A, message};
+			const notifying = (fields: Record<string, unknown>) => ({
+				...pushed,
+				message: {...message, notification: {...message.notification, ...fields}},
+			});
+			const parity: [string, string, unknown, 400 | 401][] = [
+				['register: an unknown key', '/api/register', {...signed, extra: 1}, 401],
+				['register: no 0x prefix', '/api/register', {...signed, ownershipSignature: '12'}, 400],
+				['register: 0x and no hex (the prefix only)', '/api/register', {...signed, ownershipSignature: '0xzz'}, 401],
+				[
+					'register: expirationTime missing',
+					'/api/register',
+					{...signed, subscription: {endpoint: 'e', keys: {p256dh: 'a', auth: 'b'}}},
+					400,
+				],
+				[
+					'register: expirationTime a string',
+					'/api/register',
+					{...signed, subscription: {...subscription, expirationTime: '1'}},
+					400,
+				],
+				[
+					'register: expirationTime a fraction',
+					'/api/register',
+					{...signed, subscription: {...subscription, expirationTime: 1.5}},
+					401,
+				],
+				['register: null', '/api/register', null, 400],
+				['register: an array', '/api/register', [signed], 400],
+				['push: an unknown key', '/api/push', {...pushed, extra: 1}, 401],
+				['push: web_push as a string', '/api/push', {...pushed, message: {...message, web_push: '8030'}}, 400],
+				['push: null for an optional key', '/api/push', {...pushed, urgency: null}, 400],
+				['push: topic a number', '/api/push', {...pushed, topic: 1}, 400],
+				['push: dir outside its enum', '/api/push', notifying({dir: 'up'}), 400],
+				['push: dir rtl', '/api/push', notifying({dir: 'rtl'}), 401],
+				['push: vibrate of strings', '/api/push', notifying({vibrate: ['1']}), 400],
+				['push: data an array', '/api/push', notifying({data: [1]}), 400],
+				['push: data null', '/api/push', notifying({data: null}), 400],
+				['push: data an object', '/api/push', notifying({data: {a: 1}}), 401],
+				['push: an action without navigate', '/api/push', notifying({actions: [{action: 'a', title: 't'}]}), 400],
+				['push: timestamp a boolean', '/api/push', notifying({timestamp: true}), 400],
+				['push: app_badge a string', '/api/push', {...pushed, message: {...message, app_badge: '1'}}, 400],
+			];
+			for (const [name, path, body, status] of parity) {
+				it(`as 0.1.0 did, ${name}: ${status}`, async () => {
+					expect((await request(path, json(body))).status).toBe(status);
+				});
+			}
+
 			it('POST /push forwards the message as sent, fields it does not know included', async () => {
 				const alice = await createIdentity(DOMAIN_A);
 				await register(alice);

@@ -27,7 +27,7 @@
   },
   "scripts": {
     "prepare": "set-defaults .",
-    "build": "tsc --noEmit -p .",
+    "build": "tsc --noEmit -p . && WRANGLER_SEND_METRICS=false wrangler -e production deploy --dry-run --outdir dist",
     "deploy:production": "wrangler -e production deploy --minify",
     "dev": "pnpm init-db && wrangler dev -e production --port 34005",
     "init-db": "ldenv wrangler -e production d1 execute push-notification-db --file=node_modules/@push-notification/server/src/schema/sql/db.sql ~~"

@@ -1,5 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {generateOpenAPIDocument} from '../src/openapi.js';
+import {getAPI} from '../src/api/index.js';
+import {apiRoutes} from '../src/api/routes.js';
 
 type Operation = {
 	parameters?: {in: string; name: string}[];
@@ -15,6 +17,14 @@ describe('the OpenAPI document, generated from the schemas that validate the API
 		(op.parameters ?? []).filter((p) => p.in === where).map((p) => p.name);
 	const responseKeys = (op: Operation, status: number) =>
 		Object.keys(op.responses[status]?.content?.['application/json'].schema.properties ?? {});
+
+	it('the route table is the API: every route getAPI serves, and only those', () => {
+		const served = getAPI({getDB: () => undefined as never, getEnv: () => undefined as never})
+			.routes.filter((r) => r.method !== 'ALL')
+			.map((r) => `${r.method} ${r.path}`);
+		const described = Object.values(apiRoutes).map((r) => `${r.method.toUpperCase()} ${r.path}`);
+		expect([...new Set(served)].sort()).toEqual(described.sort());
+	});
 
 	it('describes every route', () => {
 		expect(Object.keys(document.paths).sort()).toEqual([

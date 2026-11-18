@@ -12,8 +12,9 @@ blockedBy: []
 
 - [x] `pnpm check:packed` (in the verify) packs the built server and cli, installs the tarballs with npm in an empty directory, imports both and gets a 400 for an invalid body; red on 0.1.0 with the reported error.
 - [x] Every body, path and response of `/api/register`, `/api/unregister`, `/api/push`, `/api/registered/:address/:domain[/:subscriptionID]` has a schema pinned with `schemaFor`.
-- [x] The same statuses as 0.1.0 for 39 valid and invalid bodies (compared against `origin/main` @ 79c6683); every existing API case unchanged and green on the server package and the Node.js platform.
-- [x] The OpenAPI document (`generateOpenAPIDocument()`, `pnpm openapi`) describes every route, held by a test.
+- [x] The same statuses as 0.1.0 for 39 valid and invalid bodies (compared against `origin/main` @ 79c6683), 21 of them kept as a table in the API suite; every existing API case unchanged and green on the server package and the Node.js platform.
+- [x] The OpenAPI document (`generateOpenAPIDocument()` from `@push-notification/server/openapi`, `pnpm openapi`) describes every route, held by a test, and the route table it reads is held to the routes `getAPI` serves.
+- [x] The cf-worker still bundles, checked by its `build` (`wrangler deploy --dry-run`).
 - [x] No typia, ts-patch, unplugin-typia, typia validator or typia OpenAPI generator left; `git grep -i typia` empty outside the changelogs.
 - [x] Patch changesets for the server, the cli and the cf-worker.
 
@@ -25,6 +26,8 @@ blockedBy: []
 - The headers (SIGNATURE, Authorization, Idempotency-Key) stay checked in the handlers, never by a schema: a schema would answer 400 where the contract answers 401 (missing proof or token) and would reorder the checks (the body is validated first, then the token, then the key). They are described in the OpenAPI document instead.
 - Path parameters get a schema (`validate('param', ...)`) that cannot refuse (a segment is always a string): for the document and typed access, not for a new rule. An invalid `domain` still fails where it did.
 - The response types (`RegistrationResult`, `RemovalResult`, `SubscriptionCheck`, `RegisteredCount`, `ErrorResult`) are new exported types, so each answer has a type its schema is pinned to; the handlers build their answers through them.
+- Validation runs on `@hono/standard-validator` (the validator hono-openapi wraps), and the OpenAPI generator lives only in the `./openapi` entry, reading the route table `src/api/routes.ts` (paths, schemas, descriptions) that `getAPI` also uses. fuzd attaches hono-openapi's `describeRoute`/`validator` to the live routes instead; here that broke the worker's bundle (hono-openapi's `@standard-community/standard-json` imports the optional `zod-to-json-schema`, which esbuild cannot resolve) and, once stubbed, grew it from 50 KB to 484 KB gzip with the JSON-schema converters. With the split it is 143 KB gzip (`--minify`), nearly all of the growth being zod itself. A test holds the table to the routes `getAPI` serves, so a route cannot go undescribed. fuzd's worker likely has the same latent bundling break.
+- The cf-worker's `build` bundles it (`wrangler deploy --dry-run --outdir dist`, no login, no port): `tsc --noEmit` alone missed the break above.
 - The OpenAPI document is generated, not served: no route serves it today (`@hono/swagger-ui` is a dependency nothing uses, left as it was), and serving it would add routes. The generator is a script outside `src` (`generate-openapi.mjs`) so the runtime-agnostic server does not take on Node types. The old `pnpm openapi` did not run (it looked for a `PublicAPI` type the server never exported).
 - The packed-install check reaches the npm registry, so it is a step of the verify (`pnpm check:packed`), never part of `pnpm test`; it opens no port. It does not look for typia by name: the clean-install import and request are what catch an undeclared runtime import.
 - hono `^4.11.2` (hono-openapi 1.x's peer), zod `^4.4.3`, zod-schema-for `^0.1.1`, as fuzd.
