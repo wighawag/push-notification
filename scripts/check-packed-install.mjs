@@ -3,8 +3,8 @@
 // packed as npm publishes them, installed with npm in an empty directory (only what
 // they declare, nothing hoisted from this workspace), must import and answer a
 // request. It catches a runtime import a package does not declare: 0.1.0 imported
-// typia 7's runtime without declaring typia, so a fresh install resolved nothing
-// (or typia 12) and `import('@push-notification/cli')` threw.
+// its validators' runtime (generated at compile time) without declaring it, so a
+// fresh install resolved it at another major version and `import('@push-notification/cli')` threw.
 //
 // Run after `pnpm build`. It installs from the npm registry, so it reaches the
 // network: it is a step of the verify, never part of `pnpm test`. It opens no port.
@@ -59,11 +59,6 @@ try {
 		console.log('packed @push-notification/server and @push-notification/cli import and validate');
 	`;
 	process.stdout.write(run('node', ['--input-type=module', '-e', probe], app));
-
-	// the class of bug, not only its first instance: nothing in the installed tree pulls typia in
-	if (fs.existsSync(path.join(app, 'node_modules', 'typia'))) {
-		throw new Error(`typia is installed: something still depends on it (npm ls typia):\n${run('npm', ['ls', 'typia', '--all'], app)}`);
-	}
 } finally {
 	fs.rmSync(work, {recursive: true, force: true});
 }

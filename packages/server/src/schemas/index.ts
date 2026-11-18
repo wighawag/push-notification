@@ -21,10 +21,10 @@ import type {Urgency} from '../web-push/types.js';
 // schema here is pinned to one with `schemaFor` (exact identity, not assignability), so a
 // schema that drifts from its type, by a key or a narrowed value, does not compile.
 //
-// Acceptance is typia's (`createValidate`, which validated the bodies up to 0.1.0): the
-// same required and optional keys, the same primitive types, `0x${string}` checked for
-// its prefix only. One difference: unknown keys are stripped (zod's default) where typia
-// let them through; see `PushSchema` for the one place that would matter.
+// Acceptance is that of the compile-time validators these replace (up to 0.1.0): the same
+// required and optional keys, the same primitive types, `0x${string}` checked for its
+// prefix only. One difference: unknown keys are stripped (zod's default) where those let
+// them through; see `PushSchema` for the one place that would matter.
 
 export {schemaFor};
 
@@ -33,7 +33,7 @@ export {schemaFor};
 // ------------------------------------------------------------------------------------------------
 
 /**
- * A `0x`-prefixed string, as typia checked the template literal (`/^0x(.*)/`): no hex or
+ * A `0x`-prefixed string, as 0.1.0 checked the template literal (`/^0x(.*)/`): no hex or
  * length check, no change of case. A malformed signature is delegated-identity's to
  * refuse (400 "a signature is malformed"), as before.
  */
@@ -110,7 +110,7 @@ export const DeclarativePushNotificationSchema = schemaFor<DeclarativePushNotifi
 
 /**
  * POST /push's body. It validates the message, but the handler forwards the message AS
- * SENT (the parsed JSON, not this schema's output) to the push services: typia let unknown
+ * SENT (the parsed JSON, not this schema's output) to the push services: 0.1.0 let unknown
  * keys through, and stripping them would silently drop fields of the Declarative Web Push
  * format this type does not list yet.
  */
