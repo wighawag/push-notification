@@ -23,6 +23,7 @@ export type {
 	RegistrationResult,
 	RemovalResult,
 	SubscriptionCheck,
+	SubscriptionAccounts,
 	RegisteredCount,
 	ErrorResult,
 } from './api/index.js';

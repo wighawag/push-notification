@@ -1,11 +1,13 @@
 import {REQUEST_SIGNATURE_HEADER} from 'delegated-identity';
 import {
 	AccountParamsSchema,
+	EndpointParamsSchema,
 	PushResultSchema,
 	PushSchema,
 	RegisteredCountSchema,
 	RegistrationResultSchema,
 	RemovalResultSchema,
+	SubscriptionAccountsSchema,
 	SubscriptionCheckSchema,
 	SubscriptionParamsSchema,
 	SubscriptionRegistrationSchema,
@@ -41,7 +43,8 @@ export const apiRoutes = {
 	register: {
 		method: 'post',
 		path: '/register',
-		description: "Records the subscription for the account in the app, proven by the account's two signatures.",
+		description:
+			"Records the subscription for the account in the app, proven by the account's two signatures. With `replaceOtherAccounts`, the same transaction removes the endpoint's registrations for every other account of the app (one account per device).",
 		json: SubscriptionRegistrationSchema,
 		response: RegistrationResultSchema,
 		refusals: [400, 401, 403],
@@ -63,6 +66,14 @@ export const apiRoutes = {
 		description: 'Whether the subscription (its endpoint, URL-encoded) is registered for the account in the app.',
 		param: SubscriptionParamsSchema,
 		response: SubscriptionCheckSchema,
+	},
+	subscriptionAccounts: {
+		method: 'get',
+		path: '/accounts/:domain/:subscriptionID',
+		description:
+			'The accounts the subscription (its endpoint, URL-encoded) is registered for in the app, so the app can say which account a device is notified for.',
+		param: EndpointParamsSchema,
+		response: SubscriptionAccountsSchema,
 	},
 	registeredCount: {
 		method: 'get',

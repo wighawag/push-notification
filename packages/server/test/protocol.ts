@@ -106,6 +106,8 @@ export async function registration(
 		serverOrigin?: string;
 		path?: string;
 		timestamp?: number;
+		/** more fields of the body, signed with it (e.g. `replaceOtherAccounts`) */
+		extra?: Record<string, unknown>;
 	},
 ): Promise<RequestInit> {
 	const body = JSON.stringify({
@@ -113,6 +115,7 @@ export async function registration(
 		domain: identity.domain,
 		subscription,
 		ownershipSignature: identity.ownershipSignature,
+		...options?.extra,
 	});
 	const headers: Record<string, string> = {'content-type': 'application/json'};
 	if (!options?.noSignature) {

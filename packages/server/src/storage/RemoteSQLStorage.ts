@@ -17,21 +17,47 @@ type SubscriptionInDB = {
 export class RemoteSQLStorage implements Storage {
 	constructor(private db: RemoteSQL) {}
 
-	async recordSubscription(address: string, domain: string, subscription: Subscription): Promise<void> {
-		const sqlStatement = `INSERT INTO Subscriptions (address, domain, subscriptionID, subscription, timestamp, expiry)
+	async recordSubscription(
+		address: string,
+		domain: string,
+		subscription: Subscription,
+		options: {replaceOtherAccounts?: boolean} = {},
+	): Promise<{replacedAccounts: string[]}> {
+		const record = this.db
+			.prepare(
+				`INSERT INTO Subscriptions (address, domain, subscriptionID, subscription, timestamp, expiry)
 		 VALUES(?1, ?2, ?3, ?4, UNIXEPOCH(), ?5)
 		 ON CONFLICT (address, domain, subscriptionID) DO UPDATE SET
-		 subscription = excluded.subscription, timestamp = excluded.timestamp, expiry = excluded.expiry;`;
-		const statement = this.db.prepare(sqlStatement);
-		await statement
+		 subscription = excluded.subscription, timestamp = excluded.timestamp, expiry = excluded.expiry;`,
+			)
 			.bind(
 				address,
 				domain,
 				subscription.endpoint,
 				JSON.stringify(subscription),
 				subscription.expirationTime ? Math.floor(subscription.expirationTime / 1000) : null,
+			);
+		if (!options.replaceOtherAccounts) {
+			await record.all();
+			return {replacedAccounts: []};
+		}
+		// one batch, one transaction (libSQL's and D1's batch): the device never
+		// belongs to two accounts, nor to none, as another request sees it
+		const removeOthers = this.db
+			.prepare(
+				`DELETE FROM Subscriptions WHERE domain = ?1 AND subscriptionID = ?2 AND address != ?3 RETURNING address;`,
 			)
-			.all();
+			.bind(domain, subscription.endpoint, address);
+		const [removed] = await this.db.batch<{address: string}>([removeOthers, record]);
+		return {replacedAccounts: removed.results.map((row) => String(row.address)).sort()};
+	}
+
+	async getAccountsOf(domain: string, subscriptionID: string): Promise<string[]> {
+		const statement = this.db.prepare(
+			`SELECT address FROM Subscriptions WHERE domain = ?1 AND subscriptionID = ?2 ORDER BY address;`,
+		);
+		const {results} = await statement.bind(domain, subscriptionID).all<{address: string}>();
+		return results.map((row) => String(row.address));
 	}
 
 	async getSubscriptions(address: string, domain: string): Promise<Subscription[]> {

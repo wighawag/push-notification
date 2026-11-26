@@ -22,6 +22,15 @@ export type SubscriptionRegistration = {
 	domain: string;
 	subscription: Subscription;
 	ownershipSignature: `0x${string}`;
+	/**
+	 * When true, this device (the subscription's endpoint) becomes this
+	 * account's ALONE in the app: its registrations for every OTHER account of
+	 * the same app are removed in the same transaction as this one is recorded,
+	 * so a browser switching accounts stops receiving the previous account's
+	 * notifications. Default false: a device may be registered for several
+	 * accounts of one app, each receiving its own.
+	 */
+	replaceOtherAccounts?: boolean;
 };
 
 /**
@@ -97,14 +106,28 @@ export type PushResult = {
 	removed: number;
 };
 
-/** POST /register's answer. */
-export type RegistrationResult = {success: boolean; registered: boolean};
+/**
+ * POST /register's answer. `replacedAccounts`: the accounts whose registration
+ * of this endpoint `replaceOtherAccounts` removed (lowercased; empty when none,
+ * or without the option).
+ */
+export type RegistrationResult = {success: boolean; registered: boolean; replacedAccounts: string[]};
 
 /** POST /unregister's answer: `unregistered` is false when nothing was registered. */
 export type RemovalResult = {success: boolean; unregistered: boolean};
 
 /** GET /registered/:address/:domain/:subscriptionID's answer: whether that subscription is registered. */
 export type SubscriptionCheck = {success: boolean; registered: boolean};
+
+/**
+ * GET /accounts/:domain/:subscriptionID's answer: the accounts (lowercased,
+ * sorted) the subscription is registered for in the app,
+ * so an app can say which account a device is notified for.
+ */
+export type SubscriptionAccounts = {success: boolean; accounts: string[]};
+
+/** The path of GET /accounts/:domain/:subscriptionID (the subscription's endpoint, URL-encoded). */
+export type EndpointParams = {domain: string; subscriptionID: string};
 
 /** GET /registered/:address/:domain's answer (token-authenticated): the account's live subscriptions in the app. */
 export type RegisteredCount = {success: boolean; registered: boolean; count: number};

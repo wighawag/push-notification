@@ -28,6 +28,7 @@ describe('the OpenAPI document, generated from the schemas that validate the API
 
 	it('describes every route', () => {
 		expect(Object.keys(document.paths).sort()).toEqual([
+			'/api/accounts/{domain}/{subscriptionID}',
 			'/api/push',
 			'/api/register',
 			'/api/registered/{address}/{domain}',
@@ -46,7 +47,14 @@ describe('the OpenAPI document, generated from the schemas that validate the API
 			expect(Object.keys(op.responses).sort()).toEqual(['200', '400', '401', '403']);
 			expect(responseKeys(op, 403)).toEqual(['success', 'errors']);
 		}
-		expect(responseKeys(operation('/api/register', 'post'), 200)).toEqual(['success', 'registered']);
+		expect(responseKeys(operation('/api/register', 'post'), 200)).toEqual([
+			'success',
+			'registered',
+			'replacedAccounts',
+		]);
+		expect(
+			Object.keys(operation('/api/register', 'post').requestBody!.content['application/json'].schema.properties!),
+		).toContain('replaceOtherAccounts');
 		expect(responseKeys(operation('/api/unregister', 'post'), 200)).toEqual(['success', 'unregistered']);
 	});
 
@@ -74,5 +82,8 @@ describe('the OpenAPI document, generated from the schemas that validate the API
 		expect(parameters(count, 'path')).toEqual(['address', 'domain']);
 		expect(parameters(count, 'header')).toEqual(['Authorization']);
 		expect(responseKeys(count, 200)).toEqual(['success', 'registered', 'count']);
+		const accounts = operation('/api/accounts/{domain}/{subscriptionID}', 'get');
+		expect(parameters(accounts, 'path')).toEqual(['domain', 'subscriptionID']);
+		expect(responseKeys(accounts, 200)).toEqual(['success', 'accounts']);
 	});
 });

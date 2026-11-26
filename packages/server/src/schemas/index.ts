@@ -4,12 +4,14 @@ import type {Subscription} from '../types.js';
 import type {
 	AccountParams,
 	DeclarativePushNotification,
+	EndpointParams,
 	ErrorResult,
 	Push,
 	PushResult,
 	RegisteredCount,
 	RegistrationResult,
 	RemovalResult,
+	SubscriptionAccounts,
 	SubscriptionCheck,
 	SubscriptionParams,
 	SubscriptionRegistration,
@@ -61,6 +63,7 @@ export const SubscriptionRegistrationSchema = schemaFor<SubscriptionRegistration
 		domain: z.string(),
 		subscription: SubscriptionSchema,
 		ownershipSignature: OwnershipSignatureSchema,
+		replaceOtherAccounts: z.boolean().optional(),
 	}),
 );
 
@@ -130,6 +133,10 @@ export const PushSchema = schemaFor<Push>()(
 
 export const AccountParamsSchema = schemaFor<AccountParams>()(z.object({address: z.string(), domain: z.string()}));
 
+export const EndpointParamsSchema = schemaFor<EndpointParams>()(
+	z.object({domain: z.string(), subscriptionID: z.string()}),
+);
+
 export const SubscriptionParamsSchema = schemaFor<SubscriptionParams>()(
 	z.object({address: z.string(), domain: z.string(), subscriptionID: z.string()}),
 );
@@ -139,7 +146,7 @@ export const SubscriptionParamsSchema = schemaFor<SubscriptionParams>()(
 // ------------------------------------------------------------------------------------------------
 
 export const RegistrationResultSchema = schemaFor<RegistrationResult>()(
-	z.object({success: z.boolean(), registered: z.boolean()}),
+	z.object({success: z.boolean(), registered: z.boolean(), replacedAccounts: z.array(z.string())}),
 );
 
 export const RemovalResultSchema = schemaFor<RemovalResult>()(
@@ -148,6 +155,10 @@ export const RemovalResultSchema = schemaFor<RemovalResult>()(
 
 export const SubscriptionCheckSchema = schemaFor<SubscriptionCheck>()(
 	z.object({success: z.boolean(), registered: z.boolean()}),
+);
+
+export const SubscriptionAccountsSchema = schemaFor<SubscriptionAccounts>()(
+	z.object({success: z.boolean(), accounts: z.array(z.string())}),
 );
 
 export const RegisteredCountSchema = schemaFor<RegisteredCount>()(

@@ -13,6 +13,7 @@ import type {
 	RegisteredCount,
 	RegistrationResult,
 	RemovalResult,
+	SubscriptionAccounts,
 	SubscriptionCheck,
 } from './types.js';
 
@@ -110,8 +111,12 @@ export function getAPI(options: ServerOptions) {
 			if (proven instanceof Response) {
 				return proven;
 			}
-			await c.get('config').storage.recordSubscription(proven.address, proven.origin, registration.subscription);
-			const result: RegistrationResult = {success: true, registered: true};
+			const {replacedAccounts} = await c
+				.get('config')
+				.storage.recordSubscription(proven.address, proven.origin, registration.subscription, {
+					replaceOtherAccounts: registration.replaceOtherAccounts === true,
+				});
+			const result: RegistrationResult = {success: true, registered: true, replacedAccounts};
 			return c.json(result);
 		})
 		.post(apiRoutes.unregister.path, cacheRawBody, validate('json', apiRoutes.unregister.json), async (c) => {
@@ -137,6 +142,12 @@ export function getAPI(options: ServerOptions) {
 
 			const subscription = await storage.getSubscription(address, domain, subscriptionID);
 			const result: SubscriptionCheck = {success: true, registered: !!subscription};
+			return c.json(result);
+		})
+		.get(apiRoutes.subscriptionAccounts.path, validate('param', apiRoutes.subscriptionAccounts.param), async (c) => {
+			const params = c.req.valid('param');
+			const accounts = await c.get('config').storage.getAccountsOf(appOrigin(params.domain), params.subscriptionID);
+			const result: SubscriptionAccounts = {success: true, accounts};
 			return c.json(result);
 		})
 		.get(apiRoutes.registeredCount.path, validate('param', apiRoutes.registeredCount.param), async (c) => {

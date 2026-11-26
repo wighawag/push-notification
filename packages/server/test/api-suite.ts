@@ -160,6 +160,126 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 			});
 		});
 
+		describe('POST /register with replaceOtherAccounts: one account per device in an app', () => {
+			async function accountsOf(subscription: SubscriptionJSON, domain = DOMAIN_A) {
+				const response = await request(`/api/accounts/${domain}/${encodeURIComponent(subscription.endpoint)}`);
+				expect(response.status).toBe(200);
+				return ((await response.json()) as {accounts: string[]}).accounts;
+			}
+			async function registerOnly(identity: Identity, subscription: SubscriptionJSON) {
+				const response = await request(
+					'/api/register',
+					await registration(identity, subscription, {extra: {replaceOtherAccounts: true}}),
+				);
+				expect(response.status, await response.clone().text()).toBe(200);
+				return (await response.json()) as {success: boolean; registered: boolean; replacedAccounts: string[]};
+			}
+
+			it('by default, one browser registers for several accounts of the app, each notified', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const bob = await createIdentity(DOMAIN_A);
+				const shared = newSubscription();
+				const first = await request('/api/register', await registration(alice, shared));
+				expect(await first.json()).toEqual({success: true, registered: true, replacedAccounts: []});
+				await register(bob, shared);
+				expect(await accountsOf(shared)).toEqual([alice.address, bob.address].map((a) => a.toLowerCase()).sort());
+				await push({address: alice.address, domain: DOMAIN_A, message});
+				await push({address: bob.address, domain: DOMAIN_A, message});
+				expect(sender.deliveredTo(shared.endpoint)).toBe(2);
+			});
+
+			it("removes the endpoint's registrations for the other accounts of the app, and names them", async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const bob = await createIdentity(DOMAIN_A);
+				const carol = await createIdentity(DOMAIN_A);
+				const shared = newSubscription();
+				await register(alice, shared);
+				await register(carol, shared);
+				const result = await registerOnly(bob, shared);
+				expect(result).toEqual({
+					success: true,
+					registered: true,
+					replacedAccounts: [alice.address, carol.address].map((a) => a.toLowerCase()).sort(),
+				});
+				expect(await accountsOf(shared)).toEqual([bob.address.toLowerCase()]);
+				await push({address: alice.address, domain: DOMAIN_A, message});
+				expect(sender.deliveredTo(shared.endpoint)).toBe(0);
+				await push({address: bob.address, domain: DOMAIN_A, message});
+				expect(sender.deliveredTo(shared.endpoint)).toBe(1);
+			});
+
+			it("leaves the other accounts' other devices, and the same account's registration", async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const bob = await createIdentity(DOMAIN_A);
+				const shared = newSubscription();
+				const alicePhone = await register(alice);
+				await register(alice, shared);
+				await registerOnly(bob, shared);
+				expect(await registerOnly(bob, shared)).toMatchObject({replacedAccounts: []});
+				await push({address: alice.address, domain: DOMAIN_A, message});
+				expect(sender.deliveredTo(alicePhone.endpoint)).toBe(1);
+				expect(sender.deliveredTo(shared.endpoint)).toBe(0);
+			});
+
+			it("leaves the endpoint's registrations in another app", async () => {
+				const aliceOnB = await createIdentity(DOMAIN_B);
+				const bob = await createIdentity(DOMAIN_A);
+				const shared = newSubscription();
+				await register(aliceOnB, shared);
+				expect(await registerOnly(bob, shared)).toMatchObject({replacedAccounts: []});
+				expect(await accountsOf(shared, DOMAIN_B)).toEqual([aliceOnB.address.toLowerCase()]);
+			});
+
+			it('replaces nothing when the registration is refused', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const mallory = await createIdentity(DOMAIN_A);
+				const shared = newSubscription();
+				await register(alice, shared);
+				const response = await request(
+					'/api/register',
+					await registration(mallory, shared, {address: alice.address, extra: {replaceOtherAccounts: true}}),
+				);
+				expect(response.status).toBe(403);
+				expect(await accountsOf(shared)).toEqual([alice.address.toLowerCase()]);
+			});
+
+			it('the option is signed with the body: one added after signing is refused', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const bob = await createIdentity(DOMAIN_A);
+				const shared = newSubscription();
+				await register(alice, shared);
+				const response = await request(
+					'/api/register',
+					await registration(bob, shared, {
+						tamper: (body) => JSON.stringify({...JSON.parse(body), replaceOtherAccounts: true}),
+					}),
+				);
+				expect(response.status).toBe(403);
+				expect(await accountsOf(shared)).toEqual([alice.address.toLowerCase()]);
+			});
+		});
+
+		describe('GET /accounts/:domain/:subscriptionID: which accounts a device is registered for', () => {
+			it('answers none for an unknown endpoint, and is scoped to the app', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const phone = await register(alice);
+				const none = await request(`/api/accounts/${DOMAIN_A}/${encodeURIComponent('https://push.invalid/never')}`);
+				expect(await none.json()).toEqual({success: true, accounts: []});
+				const other = await request(`/api/accounts/${DOMAIN_B}/${encodeURIComponent(phone.endpoint)}`);
+				expect(await other.json()).toEqual({success: true, accounts: []});
+				const mine = await request(`/api/accounts/${DOMAIN_A}/${encodeURIComponent(phone.endpoint)}`);
+				expect(await mine.json()).toEqual({success: true, accounts: [alice.address.toLowerCase()]});
+			});
+
+			it('forgets an account once it unregisters the device', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const phone = await register(alice);
+				await request('/api/unregister', await removal(alice, phone.endpoint));
+				const response = await request(`/api/accounts/${DOMAIN_A}/${encodeURIComponent(phone.endpoint)}`);
+				expect(await response.json()).toEqual({success: true, accounts: []});
+			});
+		});
+
 		describe('POST /unregister: a device leaves an account', () => {
 			it("removes the account's subscription, and pushes no longer reach it", async () => {
 				const alice = await createIdentity(DOMAIN_A);
@@ -417,6 +537,10 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 				await expectRefused(
 					await request('/api/register', json({...body, ownershipSignature: 'no-0x-prefix'})),
 					'ownershipSignature',
+				);
+				await expectRefused(
+					await request('/api/register', json({...body, replaceOtherAccounts: 'yes'})),
+					'replaceOtherAccounts',
 				);
 			});
 

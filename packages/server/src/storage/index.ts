@@ -4,9 +4,20 @@ import {Subscription} from '../types.js';
 export type DeliveryClaim = 'claimed' | 'delivered' | 'in-flight';
 
 export interface Storage {
-	/** Records the subscription for (address, domain), or refreshes it if already there. */
-	recordSubscription(address: string, domain: string, subscription: Subscription): Promise<void>;
+	/**
+	 * Records the subscription for (address, domain), or refreshes it if already there.
+	 * With `replaceOtherAccounts`, the same transaction removes the endpoint's
+	 * registrations for every other address of the domain, and answers those addresses.
+	 */
+	recordSubscription(
+		address: string,
+		domain: string,
+		subscription: Subscription,
+		options?: {replaceOtherAccounts?: boolean},
+	): Promise<{replacedAccounts: string[]}>;
 	getSubscriptions(address: string, domain: string): Promise<Subscription[]>;
+	/** The addresses the subscription (its endpoint) is registered for in the domain, sorted. */
+	getAccountsOf(domain: string, subscriptionID: string): Promise<string[]>;
 	/** Removes the subscription (its endpoint) for this address and domain only. */
 	removeSubscriptionOf(address: string, domain: string, subscriptionID: string): Promise<void>;
 	/** Removes the subscription (its endpoint) wherever it is registered. */

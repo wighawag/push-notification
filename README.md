@@ -10,13 +10,16 @@ Mounted under `/api`.
 
 | Route | Who calls it | What it needs |
 |---|---|---|
-| `POST /register` `{address, domain, subscription, ownershipSignature}` | the app, in the browser | the `SIGNATURE` header (the delegate key's signature over the request envelope: this server's origin, the route, a timestamp, the body) and `ownershipSignature` (the wallet's over missiv's publication message for the delegate key), both from [delegated-identity](https://github.com/wighawag/delegated-identity) |
+| `POST /register` `{address, domain, subscription, ownershipSignature, replaceOtherAccounts?}` | the app, in the browser | the `SIGNATURE` header (the delegate key's signature over the request envelope: this server's origin, the route, a timestamp, the body) and `ownershipSignature` (the wallet's over missiv's publication message for the delegate key), both from [delegated-identity](https://github.com/wighawag/delegated-identity) |
 | `POST /unregister` `{address, domain, endpoint, ownershipSignature}` | the app, at logout or an account switch | signed as `/register`; removes that account's subscription only |
 | `GET /registered/:address/:domain/:subscriptionID` | the app, about its own subscription | nothing |
+| `GET /accounts/:domain/:subscriptionID` | the app, about its own subscription: which accounts it is registered for | nothing; answers `{accounts}` |
 | `POST /push` `{address, domain, message, topic?, urgency?}` | a service | `Authorization: Bearer <the domain's token>`; an `Idempotency-Key` when it retries |
 | `GET /registered/:address/:domain` | a service | the domain's token; answers `{registered, count}` |
 
 `/push` answers 200 when every live subscription has the push, 502 when a send failed and 409 while another request with the same key is sending, counting `delivered`, `alreadyDelivered`, `inFlight`, `failed` and `removed`. A retry with the same `Idempotency-Key` reaches only the subscriptions not yet delivered.
+
+By default one browser may be registered for several accounts of an app, each receiving its own notifications. With `replaceOtherAccounts: true`, `/register` makes the device this account's alone in the app: the same transaction removes the endpoint's registrations for every other account of the app (other apps and other devices untouched), and the answer names them in `replacedAccounts`.
 
 The operator configures the domain tokens by their SHA-256, `PUSH_TOKENS="<domain>:<sha256 hex>,..."`:
 

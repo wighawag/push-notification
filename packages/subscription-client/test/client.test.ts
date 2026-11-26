@@ -197,6 +197,82 @@ describe('createPushNotifications, against the server in process', () => {
 		expect(await push(alice.address)).toMatchObject({delivered: 1});
 	});
 
+	it('names the other accounts this device is registered for, and keeps them by default', async () => {
+		const alice = account();
+		const bob = account();
+		const current = writable<PushAccount>(alice);
+		const {notifications} = client(current, fakeBrowser());
+		expect(await until(notifications, settled)).toMatchObject({status: 'off', otherAccounts: []});
+		await notifications.enable();
+		expect(await until(notifications, settled)).toMatchObject({status: 'on', otherAccounts: []});
+
+		current.set(bob);
+		expect(await until(notifications, (s) => settled(s) && s.status !== 'on')).toMatchObject({
+			status: 'unregistered',
+			otherAccounts: [alice.address.toLowerCase()],
+		});
+		await notifications.enable();
+		expect(await until(notifications, settled)).toMatchObject({
+			status: 'on',
+			otherAccounts: [alice.address.toLowerCase()],
+		});
+		expect(await push(alice.address)).toMatchObject({delivered: 1});
+		expect(await push(bob.address)).toMatchObject({delivered: 1});
+	});
+
+	it('with replaceOtherAccounts, enabling switches the device to the current account', async () => {
+		const alice = account();
+		const bob = account();
+		const current = writable<PushAccount>(alice);
+		const {notifications} = client(current, fakeBrowser(), {replaceOtherAccounts: true});
+		await until(notifications, settled);
+		await notifications.enable();
+		expect((await until(notifications, settled)).status).toBe('on');
+
+		current.set(bob);
+		await until(notifications, (s) => settled(s) && s.status !== 'on');
+		await notifications.enable();
+		expect(await until(notifications, settled)).toMatchObject({status: 'on', otherAccounts: []});
+		expect(await push(alice.address)).toMatchObject({delivered: 0});
+		expect(await push(bob.address)).toMatchObject({delivered: 1});
+
+		current.set(alice);
+		expect(await until(notifications, (s) => settled(s) && s.status !== 'on')).toMatchObject({
+			status: 'unregistered',
+			otherAccounts: [bob.address.toLowerCase()],
+		});
+	});
+
+	it('enable({replaceOtherAccounts}) overrides the store for one call', async () => {
+		const alice = account();
+		const bob = account();
+		const current = writable<PushAccount>(alice);
+		const {notifications} = client(current, fakeBrowser());
+		await until(notifications, settled);
+		await notifications.enable();
+		await until(notifications, settled);
+		current.set(bob);
+		await until(notifications, (s) => settled(s) && s.status !== 'on');
+		await notifications.enable({replaceOtherAccounts: true});
+		expect(await until(notifications, settled)).toMatchObject({status: 'on', otherAccounts: []});
+		expect(await push(alice.address)).toMatchObject({delivered: 0});
+	});
+
+	it('against a server without GET /accounts, still tells on from unregistered, other accounts unknown', async () => {
+		const alice = account();
+		const {notifications} = client(writable<PushAccount>(alice), fakeBrowser(), {
+			fetch: ((input: string, init?: RequestInit) =>
+				new URL(input).pathname.startsWith('/api/accounts/')
+					? Promise.resolve(new Response('Not Found', {status: 404}))
+					: app.request(input, init)) as typeof fetch,
+		});
+		await until(notifications, settled);
+		await notifications.enable();
+		const state = await until(notifications, settled);
+		expect(state.status).toBe('on');
+		expect(state.otherAccounts).toBeUndefined();
+	});
+
 	it('surfaces a refused registration as an error', async () => {
 		const alice = account();
 		const {notifications} = client(writable(alice), fakeBrowser(), {

@@ -53,6 +53,14 @@ export type PushState = {
 	busy: boolean;
 	/** the last action's failure, until acknowledged */
 	error?: unknown;
+	/**
+	 * The OTHER accounts (lowercased) this device's subscription is registered
+	 * for in this app, so the app can say "this device is notified for 0x..."
+	 * and offer to switch it (`enable({replaceOtherAccounts: true})`). Empty
+	 * when none; undefined while unknown: no account or subscription checked
+	 * yet, or a server older than `GET /accounts` (0.2.0).
+	 */
+	otherAccounts?: string[];
 };
 
 export type PushNotificationsOptions = {
@@ -72,11 +80,28 @@ export type PushNotificationsOptions = {
 	permission?: () => NotificationPermission | undefined;
 	/** whether this browser has service workers and the Push API; defaults to feature detection */
 	supported?: () => boolean;
+	/**
+	 * One account per device: `enable()` registers with `replaceOtherAccounts`,
+	 * so the server removes this device's registrations for the app's other
+	 * accounts in the same transaction, and a device switched to another
+	 * account stops receiving the previous one's notifications. Default false:
+	 * a device may be registered for several accounts, each notified.
+	 */
+	replaceOtherAccounts?: boolean;
+};
+
+export type EnableOptions = {
+	/** overrides the store's `replaceOtherAccounts` for this call */
+	replaceOtherAccounts?: boolean;
 };
 
 export type PushNotifications = Readable<PushState> & {
-	/** Subscribes this browser if needed and registers it for the account (may prompt for permission). */
-	enable(): Promise<void>;
+	/**
+	 * Subscribes this browser if needed and registers it for the account (may
+	 * prompt for permission); with `replaceOtherAccounts` (this call's, else the
+	 * store's), the device leaves the app's other accounts.
+	 */
+	enable(options?: EnableOptions): Promise<void>;
 	/** Unregisters this browser for the account; other accounts registered here keep theirs. */
 	disable(): Promise<void>;
 	/** Checks again with the browser and the server. */
@@ -150,6 +175,21 @@ export function createPushNotifications(options: PushNotificationsOptions): Push
 		return response.json();
 	}
 
+	/** The accounts the subscription is registered for in the app, or undefined from a server without the route. */
+	async function accountsOf(subscription: PushSubscription): Promise<string[] | undefined> {
+		const response = await doFetch(
+			`${options.serverEndpoint}/accounts/${encodeURIComponent(options.domain)}/${encodeURIComponent(subscription.endpoint)}`,
+		);
+		if (response.status === 404) {
+			return undefined;
+		}
+		if (!response.ok) {
+			throw new Error(`accounts check failed (${response.status})`);
+		}
+		const {accounts} = (await response.json()) as {accounts?: unknown};
+		return Array.isArray(accounts) ? accounts.map((account) => String(account).toLowerCase()) : undefined;
+	}
+
 	async function isRegistered(of: NonNullable<PushAccount>, subscription: PushSubscription): Promise<boolean> {
 		const response = await doFetch(
 			`${options.serverEndpoint}/registered/${of.address}/${encodeURIComponent(options.domain)}/${encodeURIComponent(subscription.endpoint)}`,
@@ -167,24 +207,33 @@ export function createPushNotifications(options: PushNotificationsOptions): Push
 			return;
 		}
 		if (!account || !registration) {
-			set({status: 'no-account'});
+			set({status: 'no-account', otherAccounts: undefined});
 			return;
 		}
 		if (!registration.pushManager) {
-			set({status: 'unsupported'});
+			set({status: 'unsupported', otherAccounts: undefined});
 			return;
 		}
-		set({status: 'loading'});
+		set({status: 'loading', otherAccounts: undefined});
 		try {
 			const subscription = await registration.pushManager.getSubscription();
 			let status: PushStatus;
+			let otherAccounts: string[] | undefined;
 			if (!subscription) {
 				status = permission() === 'denied' ? 'denied' : 'off';
+				otherAccounts = [];
 			} else {
-				status = (await isRegistered(account, subscription)) ? 'on' : 'unregistered';
+				const accounts = await accountsOf(subscription);
+				if (accounts) {
+					const me = account.address.toLowerCase();
+					status = accounts.includes(me) ? 'on' : 'unregistered';
+					otherAccounts = accounts.filter((other) => other !== me);
+				} else {
+					status = (await isRegistered(account, subscription)) ? 'on' : 'unregistered';
+				}
 			}
 			if (mine === generation) {
-				set({status});
+				set({status, otherAccounts});
 			}
 		} catch (error) {
 			if (mine === generation) {
@@ -228,7 +277,8 @@ export function createPushNotifications(options: PushNotificationsOptions): Push
 
 	return {
 		subscribe: store.subscribe,
-		async enable() {
+		async enable(enableOptions?: EnableOptions) {
+			const replaceOtherAccounts = enableOptions?.replaceOtherAccounts ?? options.replaceOtherAccounts ?? false;
 			await act(async (of, on) => {
 				let subscription = await on.pushManager.getSubscription();
 				if (!subscription) {
@@ -237,7 +287,10 @@ export function createPushNotifications(options: PushNotificationsOptions): Push
 						applicationServerKey: base64UrlToBytes(options.vapidPublicKey) as BufferSource,
 					});
 				}
-				await signedPost('register', of, {subscription: subscription.toJSON()});
+				await signedPost('register', of, {
+					subscription: subscription.toJSON(),
+					...(replaceOtherAccounts ? {replaceOtherAccounts: true} : {}),
+				});
 			});
 		},
 		async disable() {
