@@ -5,6 +5,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {get, writable, type Readable} from 'sveltore';
 import {generatePrivateKey, privateKeyToAccount} from 'viem/accounts';
 import {createClient} from '@libsql/client';
+import {deriveKeySet, originPublicKeyPublicationMessage} from 'delegated-identity';
 import {RemoteLibSQL} from 'remote-sql-libsql';
 import {createServer, setupDatabase, type PushSender} from '@push-notification/server';
 import {createPushNotifications, type PushAccount, type PushState} from '../src/index.js';
@@ -46,11 +47,12 @@ function fakeBrowser(options?: {deny?: boolean}) {
 	};
 }
 
+/** An account as `@etherplay/connect` hands it out: the wallet's address and its key set in the app (from its origin key). */
 function newAccount() {
 	const wallet = privateKeyToAccount(generatePrivateKey());
 	return {
 		wallet,
-		account: {address: wallet.address, delegatePrivateKey: generatePrivateKey()} as NonNullable<PushAccount>,
+		account: {address: wallet.address, keySet: deriveKeySet(generatePrivateKey())} as NonNullable<PushAccount>,
 	};
 }
 
@@ -145,12 +147,54 @@ describe('createPushNotifications, against the server in process', () => {
 		expect(sent).toEqual([browser.endpoint()]);
 	});
 
+	it('registers and unregisters a connect-shaped account (key set + ownership signature), sending no private key', async () => {
+		const alice = account();
+		const ownershipSignature = await walletsByAddress.get(alice.address)!.signMessage({
+			message: originPublicKeyPublicationMessage('https://game.example', alice.keySet),
+		});
+		const requests: {url: string; init?: RequestInit}[] = [];
+		const browser = fakeBrowser();
+		const {notifications, signOwnership} = client(writable<PushAccount>({...alice, ownershipSignature}), browser, {
+			fetch: ((input: string, init?: RequestInit) => {
+				requests.push({url: input, init});
+				return app.request(input, init);
+			}) as typeof fetch,
+		});
+		await until(notifications, settled);
+		await notifications.enable();
+		expect((await until(notifications, settled)).status).toBe('on');
+		expect(await push(alice.address)).toMatchObject({delivered: 1});
+		await notifications.disable();
+		expect((await until(notifications, settled)).status).toBe('unregistered');
+		expect(await push(alice.address)).toMatchObject({delivered: 0});
+		expect(signOwnership).not.toHaveBeenCalled();
+
+		const posts = requests.filter((r) => r.init?.method === 'POST');
+		expect(posts.map((r) => new URL(r.url).pathname)).toEqual(['/api/register', '/api/unregister']);
+		for (const post of posts) {
+			const body = JSON.parse(post.init!.body as string);
+			expect(body).toMatchObject({
+				address: alice.address,
+				domain: DOMAIN,
+				ownershipSignature,
+				keySet: {
+					signing: {publicKey: alice.keySet.signing.publicKey},
+					encryption: {publicKey: alice.keySet.encryption.publicKey},
+				},
+			});
+			expect(post.init!.body).not.toContain(alice.keySet.signing.privateKey.slice(2));
+			expect(post.init!.body).not.toContain(alice.keySet.encryption.privateKey.slice(2));
+			// the SIGNATURE header names the Ed25519 signing key
+			const header = (post.init!.headers as Record<string, string>).SIGNATURE;
+			expect(header.split(':')[1]).toBe(alice.keySet.signing.publicKey.slice(2));
+		}
+	});
+
 	it("uses the account's ownershipSignature when it has one, and asks the wallet otherwise", async () => {
 		const alice = account();
 		const wallet = walletsByAddress.get(alice.address)!;
-		const {originPublicKeyPublicationMessage, delegatePublicKey} = await import('delegated-identity');
 		const ownershipSignature = await wallet.signMessage({
-			message: originPublicKeyPublicationMessage('https://game.example', delegatePublicKey(alice.delegatePrivateKey)),
+			message: originPublicKeyPublicationMessage('https://game.example', alice.keySet),
 		});
 		const {notifications, signOwnership} = client(writable({...alice, ownershipSignature}), fakeBrowser());
 		await until(notifications, settled);
@@ -164,6 +208,10 @@ describe('createPushNotifications, against the server in process', () => {
 		await asked.notifications.enable();
 		expect((await until(asked.notifications, settled)).status).toBe('on');
 		expect(asked.signOwnership).toHaveBeenCalledTimes(1);
+		expect(asked.signOwnership).toHaveBeenCalledWith(
+			bob.address,
+			originPublicKeyPublicationMessage('https://game.example', bob.keySet),
+		);
 	});
 
 	it('says denied when the user refused notifications', async () => {
@@ -276,7 +324,7 @@ describe('createPushNotifications, against the server in process', () => {
 	it('surfaces a refused registration as an error', async () => {
 		const alice = account();
 		const {notifications} = client(writable(alice), fakeBrowser(), {
-			// the wallet signs for another delegate key: the server refuses (403)
+			// the wallet signs another message than the publication of this key set: the server refuses (403)
 			signOwnership: async () =>
 				walletsByAddress.get(alice.address)!.signMessage({message: 'not the publication message'}),
 		});

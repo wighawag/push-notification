@@ -3,7 +3,13 @@
 import {beforeEach, describe, expect, it} from 'vitest';
 import {
 	createIdentity,
+	legacyPublicationMessage,
+	newKeySet,
 	newSubscription,
+	originOf,
+	publicationMessage,
+	SERVER_ORIGIN,
+	signLegacyRequest,
 	registration,
 	removal,
 	type Identity,
@@ -46,7 +52,7 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 			return request('/api/push', {method: 'POST', headers, body: JSON.stringify(body)});
 		}
 
-		describe('POST /register: a subscription is keyed by the wallet and proven by its delegate key', () => {
+		describe('POST /register: a subscription is keyed by the wallet and proven by its key set', () => {
 			it('registers a subscription whose proofs recover the address', async () => {
 				const alice = await createIdentity(DOMAIN_A);
 				const subscription = newSubscription();
@@ -67,7 +73,7 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 				await register(alice, subscription);
 			});
 
-			it('refuses a registration without the delegate signature', async () => {
+			it('refuses a registration without the request signature', async () => {
 				const alice = await createIdentity(DOMAIN_A);
 				const response = await request(
 					'/api/register',
@@ -149,6 +155,69 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 					}),
 				);
 				expect(response.status).toBe(403);
+			});
+
+			it("refuses another key set than the one the wallet authorized, signed by that key set's own key", async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const mallory = await createIdentity(DOMAIN_A);
+				// mallory's keys, presented with alice's proof: it recovers another account than alice
+				const response = await request(
+					'/api/register',
+					await registration(alice, newSubscription(), {keySet: mallory.keySet, signer: mallory}),
+				);
+				expect(response.status).toBe(403);
+			});
+
+			it('refuses a key set whose encryption key is not the one the wallet authorized', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const keySet = {signing: alice.keySet.signing, encryption: newKeySet().keySet.encryption};
+				const response = await request('/api/register', await registration(alice, newSubscription(), {keySet}));
+				expect(response.status).toBe(403);
+			});
+
+			it('refuses a malformed key set', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const keySet = {signing: alice.keySet.signing, encryption: {publicKey: '0x1234' as const}};
+				const response = await request('/api/register', await registration(alice, newSubscription(), {keySet}));
+				expect(response.status).toBe(400);
+				const withoutKeySet = await registration(alice, newSubscription(), {
+					tamper: (body) => JSON.stringify({...JSON.parse(body), keySet: undefined}),
+				});
+				expect((await request('/api/register', withoutKeySet)).status).toBe(400);
+			});
+
+			it('refuses an ownership proof over the old publication message (one secp256k1 key)', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const old = await signLegacyRequest({
+					serverOrigin: SERVER_ORIGIN,
+					method: 'POST',
+					path: '/api/register',
+					body: '',
+					timestamp: Date.now(),
+				});
+				const ownershipSignature = await alice.signMessage(legacyPublicationMessage(originOf(DOMAIN_A), old.publicKey));
+				const response = await request(
+					'/api/register',
+					await registration(alice, newSubscription(), {ownershipSignature}),
+				);
+				expect(response.status).toBe(403);
+				// the same wallet, over the new message: accepted
+				const renewed = await alice.signMessage(publicationMessage(originOf(DOMAIN_A), alice.keySet));
+				await register({...alice, ownershipSignature: renewed});
+			});
+
+			it('refuses an old-format (secp256k1) request signature', async () => {
+				const alice = await createIdentity(DOMAIN_A);
+				const init = await registration(alice, newSubscription());
+				const old = await signLegacyRequest({
+					serverOrigin: SERVER_ORIGIN,
+					method: 'POST',
+					path: '/api/register',
+					body: init.body as string,
+					timestamp: Date.now(),
+				});
+				(init.headers as Record<string, string>).SIGNATURE = old.signature;
+				expect((await request('/api/register', init)).status).toBe(400);
 			});
 
 			it('keys the subscription by the address, whatever its case', async () => {
@@ -331,6 +400,7 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 					address: alice.address,
 					domain: DOMAIN_A,
 					endpoint: phone.endpoint,
+					keySet: alice.keySet,
 					ownershipSignature: alice.ownershipSignature,
 				});
 				const response = await request('/api/unregister', {...signed, body});
@@ -539,6 +609,10 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 					'ownershipSignature',
 				);
 				await expectRefused(
+					await request('/api/register', json({...body, keySet: {...body.keySet, encryption: {publicKey: 'ab'}}})),
+					'keySet.encryption.publicKey',
+				);
+				await expectRefused(
 					await request('/api/register', json({...body, replaceOtherAccounts: 'yes'})),
 					'replaceOtherAccounts',
 				);
@@ -546,8 +620,13 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 
 			it('POST /unregister', async () => {
 				await expectRefused(
-					await request('/api/unregister', json({address: '0x1', domain: DOMAIN_A, ownershipSignature: '0x1'})),
+					await request(
+						'/api/unregister',
+						json({address: '0x1', domain: DOMAIN_A, keySet: {signing: {}}, ownershipSignature: '0x1'}),
+					),
 					'endpoint',
+					'keySet.signing.publicKey',
+					'keySet.encryption',
 				);
 			});
 
@@ -566,7 +645,8 @@ export function describeAPI(platform: string, makeApp: MakeApp) {
 			// what 0.1.0's validators accepted and refused, compared case by case on 79c6683:
 			// a refused body answers 400, an accepted one reaches the token check (401 without it)
 			const subscription = {endpoint: 'https://push.example/1', expirationTime: null, keys: {p256dh: 'a', auth: 'b'}};
-			const signed = {address: '0xabc', domain: DOMAIN_A, subscription, ownershipSignature: '0x12'};
+			const keySet = {signing: {publicKey: '0x1'}, encryption: {publicKey: '0x2'}};
+			const signed = {address: '0xabc', domain: DOMAIN_A, subscription, keySet, ownershipSignature: '0x12'};
 			const pushed = {address: '0xabc', domain: DOMAIN_A, message};
 			const notifying = (fields: Record<string, unknown>) => ({
 				...pushed,

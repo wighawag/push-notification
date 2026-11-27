@@ -1,13 +1,13 @@
 # push-notification-example-svelte
 
-A SvelteKit page that subscribes a browser to push notifications from @push-notification/server, for a fake wallet account (`src/lib/fake-owner-account`) and the delegate key derived from it (`src/lib/private-account`).
+A SvelteKit page that subscribes a browser to push notifications from @push-notification/server, for a fake wallet account (`src/lib/fake-owner-account`) and the key set derived from its local signer (`src/lib/private-account`, then delegated-identity's `deriveKeySet`, as `@etherplay/connect` derives it from the origin key).
 
 ## How it registers
 
 `src/lib/state.ts` wires @push-notification/client (`createPushNotifications`): it subscribes the service worker with the server's VAPID public key, then calls `POST /api/register` with two proofs, both from delegated-identity (and `POST /api/unregister` to disable):
 
-- `ownershipSignature`: the wallet's signature over the publication message naming the delegate key for this domain's origin (`originPublicKeyPublicationMessage(fromDomainToOrigin(domain), delegatePublicKey(privateKey))`), one wallet prompt per registration;
-- the `SIGNATURE` header: the delegate key's signature over the request envelope, which names the server's origin, `POST /api/register`, a timestamp and the body (`signRequest`); the server refuses it after a minute.
+- `keySet` and `ownershipSignature`: the key set's two public keys (an Ed25519 signing key and an X25519 encryption key) and the wallet's signature over the publication message naming both for this domain's origin (`originPublicKeyPublicationMessage(fromDomainToOrigin(domain), keySet)`), one wallet prompt per registration;
+- the `SIGNATURE` header: the signing key's Ed25519 signature over the request envelope, which names the server's origin, `POST /api/register`, a timestamp and the body (`signRequest`), the header naming the key; the server refuses it after a minute.
 
 The subscription is then keyed by the WALLET address, so a service notifying that account reaches every device it registered.
 

@@ -18,12 +18,11 @@
     "src"
   ],
   "dependencies": {
-    "delegated-identity": "^0.1.0",
+    "delegated-identity": "^0.2.0",
     "sveltore": "^1.0.0"
   },
   "devDependencies": {
     "@libsql/client": "^0.15.15",
-    "@noble/secp256k1": "^2.3.0",
     "as-soon": "^0.0.11",
     "prettier": "^3.5.2",
     "@push-notification/server": "workspace:*",

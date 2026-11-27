@@ -48,3 +48,11 @@ git fetch <remote> && git switch -c work/ed25519-delegated-identity <remote>/mai
 # on completion, in the work branch's PR/merge:
 git mv work/tasks/ready/ed25519-delegated-identity.md work/tasks/done/ed25519-delegated-identity.md
 ```
+
+## Decisions
+
+- **The client's account shape is `{address, keySet, ownershipSignature?}`**, with `keySet` typed as `{signing: KeyPair; encryption: {publicKey: Key}}`. Any `delegated-identity` `KeySet` fits it, and an app does not have to hand over the encryption private key. `@etherplay/connect` 0.19.0 is not released and its plan ([etherplay-connect `plans/ed25519-keys-in-the-publication.md`]) leaves the field name open (it suggests `keys`). I named the field `keySet` after the library's type and the body field. If connect lands on another name, apps map one field (`{address, keySet: account.keys, ownershipSignature}`). The alternative was to wait for connect's name. This touches jolly-roger's `with/push-notifications` wiring.
+- **The body field is `keySet` and holds untagged 0x hex keys**, as `delegated-identity`'s README shows. The `ed25519:`/`x25519:` algorithm tags exist only inside the publication message, and the library adds them there. The alternative was to send tagged strings, which the library does not accept as a `PublicKeySet`. This touches every caller of `/register` and `/unregister` (missiv, the trigger service, jolly-roger).
+- **The app is still named by `domain` in the body**, not by the `appOrigin` field the library's README example uses. The origin passed to `verifyRequest` is `fromDomainToOrigin(domain)`, the same origin storage and tokens are keyed by. Renaming it would have been an unrelated wire change.
+- **Key fields are checked for their `0x` prefix only** (`PublicKeySetSchema`), matching how `ownershipSignature` is handled. A key that is not 32 bytes of hex reaches `verifyRequest` and is refused as malformed (400, "a signature is malformed").
+- **The `CONTEXT.md` glossary entry "delegate key" is replaced by "key set"** (with "signing key" and "encryption key" defined inside it), to match `delegated-identity` 0.2.0's vocabulary. The old term no longer describes anything in this repo.

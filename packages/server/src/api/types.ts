@@ -5,12 +5,24 @@ import {Urgency} from '../web-push/types.js';
 // described) by a zod schema in ../schemas pinned to it with `schemaFor`, exact identity.
 
 /**
+ * The account's key set in the app, its public half (see delegated-identity):
+ * an Ed25519 signing key, which signs each request, and an X25519 encryption
+ * key, both 32 bytes as 0x-prefixed hex. The publication message names both,
+ * so the ownership proof holds for exactly this pair.
+ */
+export type PublicKeySet = {
+	signing: {publicKey: `0x${string}`};
+	encryption: {publicKey: `0x${string}`};
+};
+
+/**
  * POST /register's body. The request carries two proofs (see delegated-identity):
- * the SIGNATURE header, the delegate key's signature over the request envelope
- * (this server's origin, `POST /api/register`, a timestamp, this raw body);
- * and `ownershipSignature`, the wallet's signature over the publication message
- * naming that delegate key for the app's origin. The subscription is recorded
- * for `address` only if both recover it.
+ * the SIGNATURE header, the key set's Ed25519 signing key's signature over the
+ * request envelope (this server's origin, `POST /api/register`, a timestamp,
+ * this raw body), the header naming that key; and `ownershipSignature`, the
+ * wallet's EIP-191 signature over the publication message naming `keySet` for
+ * the app's origin. The subscription is recorded for `address` only if both
+ * prove it.
  *
  * `domain` is the app: a bare host (`game.example`, meaning
  * `https://game.example`; `localhost:5173`, meaning `http://`) or an origin.
@@ -21,6 +33,7 @@ export type SubscriptionRegistration = {
 	address: string;
 	domain: string;
 	subscription: Subscription;
+	keySet: PublicKeySet;
 	ownershipSignature: `0x${string}`;
 	/**
 	 * When true, this device (the subscription's endpoint) becomes this
@@ -42,6 +55,7 @@ export type SubscriptionRemoval = {
 	address: string;
 	domain: string;
 	endpoint: string;
+	keySet: PublicKeySet;
 	ownershipSignature: `0x${string}`;
 };
 

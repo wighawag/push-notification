@@ -24,7 +24,8 @@ export type Header = {name: string; description: string; required: boolean};
 
 const signatureHeader: Header = {
 	name: REQUEST_SIGNATURE_HEADER,
-	description: "the delegate key's signature over the request envelope (see delegated-identity)",
+	description:
+		"`<timestamp ms>:<signing key hex>:<signature hex>`: the key set's Ed25519 signing key's signature over the request envelope (see delegated-identity)",
 	required: true,
 };
 const authorizationHeader: Header = {
