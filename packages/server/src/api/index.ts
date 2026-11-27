@@ -9,6 +9,7 @@ import {validate} from '../validation.js';
 import {apiRoutes} from './routes.js';
 import type {
 	ErrorResult,
+	PublicKeySet,
 	PushResult,
 	RegisteredCount,
 	RegistrationResult,
@@ -67,14 +68,16 @@ const cacheRawBody: MiddlewareHandler = async (c, next) => {
 };
 
 /**
- * The two proofs of a signed request (see delegated-identity): the account it
- * speaks for and the app origin, or the refusal to answer with: 401 without a
- * signature or outside its minute, 400 malformed, 403 when the proofs do not
- * recover `address` for this server, route, body and app.
+ * The two proofs of a signed request (see delegated-identity's stateless
+ * `verifyRequest`): the account it speaks for and the app origin, or the
+ * refusal to answer with: 401 without a signature or outside its minute, 400
+ * malformed (the header, a key of the key set, or the ownership signature),
+ * 403 when they do not prove `address` for this server, route, body, key set
+ * and app. The app origin is the one `domain` names, passed as it is.
  */
 async function proveAccount(
 	c: Context<{Bindings: Env}>,
-	claim: {address: string; domain: string; ownershipSignature: `0x${string}`},
+	claim: {address: string; domain: string; keySet: PublicKeySet; ownershipSignature: `0x${string}`},
 ): Promise<{address: string; origin: string} | Response> {
 	const requestSignature = c.req.header(REQUEST_SIGNATURE_HEADER);
 	if (!requestSignature) {
@@ -90,6 +93,7 @@ async function proveAccount(
 		signature: requestSignature,
 		appOrigin: origin,
 		address: claim.address,
+		keySet: claim.keySet,
 		ownershipSignature: claim.ownershipSignature,
 	});
 	if (!verified.ok) {

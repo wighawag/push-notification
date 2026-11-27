@@ -10,8 +10,8 @@ Mounted under `/api`.
 
 | Route | Who calls it | What it needs |
 |---|---|---|
-| `POST /register` `{address, domain, subscription, ownershipSignature, replaceOtherAccounts?}` | the app, in the browser | the `SIGNATURE` header (the delegate key's signature over the request envelope: this server's origin, the route, a timestamp, the body) and `ownershipSignature` (the wallet's over missiv's publication message for the delegate key), both from [delegated-identity](https://github.com/wighawag/delegated-identity) |
-| `POST /unregister` `{address, domain, endpoint, ownershipSignature}` | the app, at logout or an account switch | signed as `/register`; removes that account's subscription only |
+| `POST /register` `{address, domain, subscription, keySet, ownershipSignature, replaceOtherAccounts?}` | the app, in the browser | `keySet` (`{signing: {publicKey}, encryption: {publicKey}}`: the account's Ed25519 signing key and X25519 encryption key), the `SIGNATURE` header (the signing key's Ed25519 signature over the request envelope: this server's origin, the route, a timestamp, the body; `<timestamp>:<signing key>:<signature>`) and `ownershipSignature` (the wallet's EIP-191 signature over the publication message naming both keys for the app's origin), all from [delegated-identity](https://github.com/wighawag/delegated-identity) 0.2 |
+| `POST /unregister` `{address, domain, endpoint, keySet, ownershipSignature}` | the app, at logout or an account switch | signed as `/register`; removes that account's subscription only |
 | `GET /registered/:address/:domain/:subscriptionID` | the app, about its own subscription | nothing |
 | `GET /accounts/:domain/:subscriptionID` | the app, about its own subscription: which accounts it is registered for | nothing; answers `{accounts}` |
 | `POST /push` `{address, domain, message, topic?, urgency?}` | a service | `Authorization: Bearer <the domain's token>`; an `Idempotency-Key` when it retries |

@@ -1,5 +1,6 @@
 import { derived, get } from 'svelte/store';
 import { createPushNotifications, type PushAccount } from '@push-notification/client';
+import { deriveKeySet } from 'delegated-identity';
 import { PUBLIC_VAPID_SERVER_PUBLIC_KEY } from './config';
 import { createServiceWorker } from './web/service-worker';
 import { createFakeOwnerAccount } from './fake-owner-account';
@@ -34,14 +35,15 @@ export const pushNotifications = createPushNotifications({
 	serverEndpoint: 'http://localhost:34005/api',
 	vapidPublicKey: PUBLIC_VAPID_SERVER_PUBLIC_KEY,
 	domain: 'push-notifications-example.etherplay.io',
-	// the wallet (owner) is who notifications are addressed to; the local signer is its delegate key
+	// the wallet (owner) is who notifications are addressed to; the key set is derived from
+	// the local signer's private key, as @etherplay/connect derives it from the origin key
 	account: derived(
 		privateAccount,
 		($privateAccount): PushAccount =>
 			$privateAccount?.signer
 				? {
 						address: $privateAccount.owner,
-						delegatePrivateKey: $privateAccount.signer.privateKey as `0x${string}`
+						keySet: deriveKeySet($privateAccount.signer.privateKey as `0x${string}`)
 					}
 				: undefined
 	),

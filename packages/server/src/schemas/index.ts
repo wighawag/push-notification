@@ -7,6 +7,7 @@ import type {
 	EndpointParams,
 	ErrorResult,
 	Push,
+	PublicKeySet,
 	PushResult,
 	RegisteredCount,
 	RegistrationResult,
@@ -41,6 +42,19 @@ export {schemaFor};
  */
 export const OwnershipSignatureSchema = schemaFor<`0x${string}`>()(z.templateLiteral(['0x', z.string()]));
 
+/**
+ * A key, `0x`-prefixed, checked for its prefix only like a signature: a key that is not 32
+ * bytes of hex is delegated-identity's to refuse (400 "a signature is malformed").
+ */
+const KeySchema = z.templateLiteral(['0x', z.string()]);
+
+export const PublicKeySetSchema = schemaFor<PublicKeySet>()(
+	z.object({
+		signing: z.object({publicKey: KeySchema}),
+		encryption: z.object({publicKey: KeySchema}),
+	}),
+);
+
 export const UrgencySchema = schemaFor<Urgency>()(z.enum(['low', 'normal', 'high']));
 
 export const NotificationDirectionSchema = schemaFor<NotificationDirection>()(z.enum(['auto', 'ltr', 'rtl']));
@@ -62,6 +76,7 @@ export const SubscriptionRegistrationSchema = schemaFor<SubscriptionRegistration
 		address: z.string(),
 		domain: z.string(),
 		subscription: SubscriptionSchema,
+		keySet: PublicKeySetSchema,
 		ownershipSignature: OwnershipSignatureSchema,
 		replaceOtherAccounts: z.boolean().optional(),
 	}),
@@ -72,6 +87,7 @@ export const SubscriptionRemovalSchema = schemaFor<SubscriptionRemoval>()(
 		address: z.string(),
 		domain: z.string(),
 		endpoint: z.string(),
+		keySet: PublicKeySetSchema,
 		ownershipSignature: OwnershipSignatureSchema,
 	}),
 );

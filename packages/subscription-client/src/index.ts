@@ -9,23 +9,29 @@
 
 import {derived, writable, type Readable} from 'sveltore';
 import {
-	delegatePublicKey,
 	fromDomainToOrigin,
 	originPublicKeyPublicationMessage,
 	REQUEST_SIGNATURE_HEADER,
 	signRequest,
+	type Key,
+	type KeyPair,
 } from 'delegated-identity';
 
-/** The account notifications are addressed to, and the delegate key the app holds for it. */
+/** The account notifications are addressed to, and the key set the app holds for it. */
 export type PushAccount =
 	| {
 			/** the wallet address */
 			address: string;
-			/** the delegate key, which signs each request */
-			delegatePrivateKey: `0x${string}`;
 			/**
-			 * The wallet's signature over the publication message for this
-			 * delegate key and app origin, if the app already has it (as
+			 * The account's key set in the app, as `@etherplay/connect` derives
+			 * it from the origin key (a delegated-identity `KeySet` fits): its
+			 * Ed25519 signing private key signs each request; only the two public
+			 * keys are sent. The encryption key's private half is not needed.
+			 */
+			keySet: {signing: KeyPair; encryption: {publicKey: Key}};
+			/**
+			 * The wallet's signature over the publication message for this key
+			 * set and app origin, if the app already has it (as
 			 * `@etherplay/connect` does); else `signOwnership` is asked.
 			 */
 			ownershipSignature?: `0x${string}`;
@@ -146,10 +152,7 @@ export function createPushNotifications(options: PushNotificationsOptions): Push
 		if (!options.signOwnership) {
 			throw new Error('the account has no ownershipSignature and no signOwnership was given');
 		}
-		return options.signOwnership(
-			of.address,
-			originPublicKeyPublicationMessage(appOrigin, delegatePublicKey(of.delegatePrivateKey)),
-		);
+		return options.signOwnership(of.address, originPublicKeyPublicationMessage(appOrigin, of.keySet));
 	}
 
 	async function signedPost(route: 'register' | 'unregister', of: NonNullable<PushAccount>, payload: object) {
@@ -158,11 +161,16 @@ export function createPushNotifications(options: PushNotificationsOptions): Push
 			address: of.address,
 			domain: options.domain,
 			...payload,
+			// the public keys only: never the private halves the account carries
+			keySet: {
+				signing: {publicKey: of.keySet.signing.publicKey},
+				encryption: {publicKey: of.keySet.encryption.publicKey},
+			},
 			ownershipSignature: await ownershipSignatureOf(of),
 		});
 		const signature = await signRequest(
 			{serverOrigin: url.origin, method: 'POST', path: url.pathname, body},
-			of.delegatePrivateKey,
+			of.keySet.signing.privateKey,
 		);
 		const response = await doFetch(url.toString(), {
 			method: 'POST',
