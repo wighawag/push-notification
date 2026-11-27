@@ -1,6 +1,6 @@
 {
   "name": "@push-notification/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "push-notification-server as a Node.js process on libSQL: the push-notification-server CLI",
   "publishConfig": {
     "access": "public"
